@@ -8,6 +8,14 @@ export enum TokenType {
   // Operators
   ASSIGN = "=",
   PLUS = "+",
+  MINUS = "-",
+  BANG = "!",
+  ASTERISK = "*",
+  SLASH = "/",
+  LT = "<",
+  GT = ">",
+  EQ = "==",
+  NOT_EQ = "!=",
 
   // Delimiters
   COMMA = ",",
@@ -21,6 +29,11 @@ export enum TokenType {
   // Keywords
   FUNCTION = "FUNCTION",
   LET = "LET",
+  TRUE = "TRUE",
+  FALSE = "FALSE",
+  IF = "IF",
+  ELSE = "ELSE",
+  RETURN = "RETURN",
 }
 
 export interface Token {

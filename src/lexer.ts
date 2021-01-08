@@ -1,10 +1,28 @@
 import { TokenType, Token, makeToken } from "./token";
 
-const input_token = (tokenType: TokenType) => (literal: string): Token =>
-  makeToken(tokenType, literal);
+const input_token = (tokenType: TokenType) => (
+  literal: string,
+  _: Lexer
+): Token => makeToken(tokenType, literal);
+
+const read_equals = (literal: string, lexer: Lexer): Token => {
+  if (lexer.ch == "=") {
+    lexer.readChar();
+    return makeToken(TokenType.EQ, "==");
+  }
+  return makeToken(TokenType.ASSIGN, literal);
+};
+
+const read_bang = (literal: string, lexer: Lexer): Token => {
+  if (lexer.ch == "=") {
+    lexer.readChar();
+    return makeToken(TokenType.NOT_EQ, "!=");
+  }
+  return makeToken(TokenType.BANG, literal);
+};
 
 interface TokenReader {
-  (literal: string): Token;
+  (literal: string, lexer: Lexer): Token;
 }
 
 interface TokenReaderMap {
@@ -12,8 +30,14 @@ interface TokenReaderMap {
 }
 
 const TOKEN_READERS: TokenReaderMap = {
-  "=": input_token(TokenType.ASSIGN),
+  "=": read_equals,
   "+": input_token(TokenType.PLUS),
+  "-": input_token(TokenType.MINUS),
+  "!": read_bang,
+  "*": input_token(TokenType.ASTERISK),
+  "/": input_token(TokenType.SLASH),
+  "<": input_token(TokenType.LT),
+  ">": input_token(TokenType.GT),
   "(": input_token(TokenType.LPAREN),
   ")": input_token(TokenType.RPAREN),
   "{": input_token(TokenType.LBRACE),
@@ -22,6 +46,11 @@ const TOKEN_READERS: TokenReaderMap = {
   ";": input_token(TokenType.SEMICOLON),
   let: input_token(TokenType.LET),
   fn: input_token(TokenType.FUNCTION),
+  true: input_token(TokenType.TRUE),
+  false: input_token(TokenType.FALSE),
+  if: input_token(TokenType.IF),
+  else: input_token(TokenType.ELSE),
+  return: input_token(TokenType.RETURN),
   "\0": (_: string): Token => makeToken(TokenType.EOF, ""),
 };
 
@@ -96,7 +125,7 @@ export default class Lexer {
 
     const tokenReader = TOKEN_READERS[literal];
     if (tokenReader) {
-      return tokenReader(literal);
+      return tokenReader(literal, this);
     }
     return makeToken(tokenType, literal);
   }
