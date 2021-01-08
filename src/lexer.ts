@@ -1,10 +1,10 @@
 import { TokenType, Token, makeToken } from "./token";
 
-const single_char_token = (tokenType: TokenType) => (lexer: Lexer): Token =>
-  makeToken(tokenType, lexer.ch);
+const input_token = (tokenType: TokenType) => (literal: string): Token =>
+  makeToken(tokenType, literal);
 
 interface TokenReader {
-  (lexer: Lexer): Token;
+  (literal: string): Token;
 }
 
 interface TokenReaderMap {
@@ -12,16 +12,26 @@ interface TokenReaderMap {
 }
 
 const TOKEN_READERS: TokenReaderMap = {
-  "=": single_char_token(TokenType.ASSIGN),
-  "+": single_char_token(TokenType.PLUS),
-  "(": single_char_token(TokenType.LPAREN),
-  ")": single_char_token(TokenType.RPAREN),
-  "{": single_char_token(TokenType.LBRACE),
-  "}": single_char_token(TokenType.RBRACE),
-  ",": single_char_token(TokenType.COMMA),
-  ";": single_char_token(TokenType.SEMICOLON),
-  "\0": (_: Lexer): Token => makeToken(TokenType.EOF, ""),
+  "=": input_token(TokenType.ASSIGN),
+  "+": input_token(TokenType.PLUS),
+  "(": input_token(TokenType.LPAREN),
+  ")": input_token(TokenType.RPAREN),
+  "{": input_token(TokenType.LBRACE),
+  "}": input_token(TokenType.RBRACE),
+  ",": input_token(TokenType.COMMA),
+  ";": input_token(TokenType.SEMICOLON),
+  let: input_token(TokenType.LET),
+  fn: input_token(TokenType.FUNCTION),
+  "\0": (_: string): Token => makeToken(TokenType.EOF, ""),
 };
+
+const LETTERS_REGEXP = /^[a-zA-Z_]/;
+const WHITESPACE_REGEXP = /^[ \t\n\r]/;
+const DIGITS_REGEXP = /^[0-9]/;
+
+const isLetter = (ch: string): boolean => LETTERS_REGEXP.test(ch);
+const isWhitespace = (ch: string): boolean => WHITESPACE_REGEXP.test(ch);
+const isDigit = (ch: string): boolean => DIGITS_REGEXP.test(ch);
 
 export default class Lexer {
   input: string;
@@ -46,14 +56,48 @@ export default class Lexer {
     this.readPosition++;
   }
 
+  advanceWhileTrue(predicate: (ch: string) => boolean) {
+    while (predicate(this.ch)) {
+      this.readChar();
+    }
+  }
+
+  readIdentifier(): string {
+    const position = this.position;
+    this.advanceWhileTrue(isLetter);
+    return this.input.substring(position, this.position);
+  }
+
+  readNumber(): string {
+    const position = this.position;
+    this.advanceWhileTrue(isDigit);
+    return this.input.substring(position, this.position);
+  }
+
+  skipWhitespace() {
+    this.advanceWhileTrue(isWhitespace);
+  }
+
   nextToken(): Token {
-    const tokenReader = TOKEN_READERS[this.ch];
-    if (!tokenReader) {
-      return makeToken(TokenType.ILLEGAL, this.ch);
+    this.skipWhitespace();
+
+    let literal = this.ch;
+    let tokenType = TokenType.ILLEGAL;
+
+    if (isLetter(this.ch)) {
+      literal = this.readIdentifier();
+      tokenType = TokenType.IDENT;
+    } else if (isDigit(this.ch)) {
+      literal = this.readNumber();
+      tokenType = TokenType.INT;
+    } else {
+      this.readChar();
     }
 
-    const token = tokenReader(this);
-    this.readChar();
-    return token;
+    const tokenReader = TOKEN_READERS[literal];
+    if (tokenReader) {
+      return tokenReader(literal);
+    }
+    return makeToken(tokenType, literal);
   }
 }
