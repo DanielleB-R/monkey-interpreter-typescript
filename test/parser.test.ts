@@ -94,6 +94,32 @@ return 993322;`;
     expect(literal.tokenLiteral()).toBe("5");
   });
 
+  it("should parse boolean literals", () => {
+    const input = "true;false;";
+
+    const parser = new Parser(new Lexer(input));
+
+    const output = parser.parseProgram();
+
+    expect(output).not.toBeNull();
+    expect(parser.errors).toHaveLength(0);
+    const program = output as ast.Program;
+
+    expect(program.statements).toHaveLength(2);
+
+    const expectedValues = [true, false];
+
+    program.statements.forEach((statement, i) => {
+      expect(statement).toBeInstanceOf(ast.ExpressionStatement);
+      const exprStatement = statement as ast.ExpressionStatement;
+
+      expect(exprStatement.expression).toBeInstanceOf(ast.BooleanLiteral);
+      const literal = exprStatement.expression as ast.BooleanLiteral;
+
+      expect(literal.value).toBe(expectedValues[i]);
+    });
+  });
+
   it("should parse prefix expressions correctly", () => {
     const cases: [string, string, number][] = [
       ["!5;", "!", 5],
@@ -156,6 +182,43 @@ return 993322;`;
       checkIntegerLiteral(infix.left, leftValue);
       expect(infix.operator).toBe(operator);
       checkIntegerLiteral(infix.right, rightValue);
+    });
+  });
+
+  it("should resolve precedence correctly", () => {
+    [
+      ["-a * b", "((-a) * b)"],
+      ["!-a", "(!(-a))"],
+      ["a + b + c", "((a + b) + c)"],
+      ["a + b - c", "((a + b) - c)"],
+      ["a * b * c", "((a * b) * c)"],
+      ["a * b / c", "((a * b) / c)"],
+      ["a + b / c", "(a + (b / c))"],
+      ["a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"],
+      ["3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"],
+      ["5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"],
+      ["5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"],
+      ["3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"],
+      ["true", "true"],
+      ["false", "false"],
+      ["3 > 5 == false", "((3 > 5) == false)"],
+      ["3 < 5 == true", "((3 < 5) == true)"],
+      ["1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"],
+      ["(5 + 5) * 2", "((5 + 5) * 2)"],
+      ["2 / (5 + 5)", "(2 / (5 + 5))"],
+      ["(5 + 5) * 2 * (5 + 5)", "(((5 + 5) * 2) * (5 + 5))"],
+      ["-(5 + 5)", "(-(5 + 5))"],
+      ["!(true == true)", "(!(true == true))"],
+    ].forEach(([input, result]) => {
+      const parser = new Parser(new Lexer(input));
+
+      const output = parser.parseProgram();
+
+      expect(output).not.toBeNull();
+      expect(parser.errors).toHaveLength(0);
+      const program = output as ast.Program;
+
+      expect(program.repr()).toBe(result);
     });
   });
 });

@@ -50,6 +50,9 @@ export default class Parser {
     this.prefixParseFns.set(TokenType.INT, this.parseIntegerLiteral);
     this.prefixParseFns.set(TokenType.BANG, this.parsePrefixExpression);
     this.prefixParseFns.set(TokenType.MINUS, this.parsePrefixExpression);
+    this.prefixParseFns.set(TokenType.TRUE, this.parseBoolean);
+    this.prefixParseFns.set(TokenType.FALSE, this.parseBoolean);
+    this.prefixParseFns.set(TokenType.LPAREN, this.parseGroupedExpression);
 
     this.infixParseFns.set(TokenType.PLUS, this.parseInfixExpression);
     this.infixParseFns.set(TokenType.MINUS, this.parseInfixExpression);
@@ -203,6 +206,13 @@ export default class Parser {
     );
   };
 
+  parseBoolean = (): ast.BooleanLiteral => {
+    return new ast.BooleanLiteral(
+      this.curToken,
+      this.currentIs(TokenType.TRUE)
+    );
+  };
+
   parsePrefixExpression = (): ast.PrefixExpression | null => {
     const token = this.curToken;
     const operator = this.curToken.literal;
@@ -213,6 +223,16 @@ export default class Parser {
       return null;
     }
     return new ast.PrefixExpression(token, operator, right);
+  };
+
+  parseGroupedExpression = (): ast.Expression | null => {
+    this.nextToken();
+    const expr = this.parseExpression(Precedence.LOWEST);
+
+    if (!this.expectPeek(TokenType.RPAREN)) {
+      return null;
+    }
+    return expr;
   };
 
   parseInfixExpression = (left: ast.Expression): ast.InfixExpression | null => {

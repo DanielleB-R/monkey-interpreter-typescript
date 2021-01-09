@@ -82,7 +82,7 @@ export class ExpressionStatement extends Statement {
   }
 
   repr(): string {
-    return `${this.expression ? this.expression.repr() : ""};`;
+    return `${this.expression ? this.expression.repr() : ""}`;
   }
 }
 
@@ -110,6 +110,25 @@ export class IntegerLiteral extends Expression {
   value: number;
 
   constructor(token: Token, value: number) {
+    super();
+    this.token = token;
+    this.value = value;
+  }
+
+  tokenLiteral(): string {
+    return this.token.literal;
+  }
+
+  repr(): string {
+    return this.token.literal;
+  }
+}
+
+export class BooleanLiteral extends Expression {
+  token: Token;
+  value: boolean;
+
+  constructor(token: Token, value: boolean) {
     super();
     this.token = token;
     this.value = value;
