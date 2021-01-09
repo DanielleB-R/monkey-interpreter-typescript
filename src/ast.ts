@@ -104,3 +104,71 @@ export class Identifier extends Expression {
     return this.value;
   }
 }
+
+export class IntegerLiteral extends Expression {
+  token: Token;
+  value: number;
+
+  constructor(token: Token, value: number) {
+    super();
+    this.token = token;
+    this.value = value;
+  }
+
+  tokenLiteral(): string {
+    return this.token.literal;
+  }
+
+  repr(): string {
+    return this.token.literal;
+  }
+}
+
+export class PrefixExpression extends Expression {
+  token: Token;
+  operator: string;
+  right: Expression;
+
+  constructor(token: Token, operator: string, right: Expression) {
+    super();
+    this.token = token;
+    this.operator = operator;
+    this.right = right;
+  }
+
+  tokenLiteral(): string {
+    return this.token.literal;
+  }
+
+  repr(): string {
+    return `(${this.operator}${this.right.repr()})`;
+  }
+}
+
+export class InfixExpression extends Expression {
+  token: Token;
+  left: Expression;
+  operator: string;
+  right: Expression;
+
+  constructor(
+    token: Token,
+    left: Expression,
+    operator: string,
+    right: Expression
+  ) {
+    super();
+    this.token = token;
+    this.left = left;
+    this.operator = operator;
+    this.right = right;
+  }
+
+  tokenLiteral(): string {
+    return this.token.literal;
+  }
+
+  repr(): string {
+    return `(${this.left.repr()} ${this.operator} ${this.right.repr()})`;
+  }
+}

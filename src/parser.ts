@@ -12,12 +12,23 @@ enum Precedence {
   CALL,
 }
 
+const PRECEDENCE_LEVELS: Map<TokenType, Precedence> = new Map([
+  [TokenType.EQ, Precedence.EQUALS],
+  [TokenType.NOT_EQ, Precedence.EQUALS],
+  [TokenType.LT, Precedence.LESSGREATER],
+  [TokenType.GT, Precedence.LESSGREATER],
+  [TokenType.PLUS, Precedence.SUM],
+  [TokenType.MINUS, Precedence.SUM],
+  [TokenType.ASTERISK, Precedence.PRODUCT],
+  [TokenType.SLASH, Precedence.PRODUCT],
+]);
+
 interface PrefixParseFn {
-  (): ast.Expression;
+  (): ast.Expression | null;
 }
 
 interface InfixParseFn {
-  (lhs: ast.Expression): ast.Expression;
+  (lhs: ast.Expression): ast.Expression | null;
 }
 
 export default class Parser {
@@ -36,6 +47,18 @@ export default class Parser {
     this.peekToken = this.l.nextToken();
 
     this.prefixParseFns.set(TokenType.IDENT, this.parseIdentifier);
+    this.prefixParseFns.set(TokenType.INT, this.parseIntegerLiteral);
+    this.prefixParseFns.set(TokenType.BANG, this.parsePrefixExpression);
+    this.prefixParseFns.set(TokenType.MINUS, this.parsePrefixExpression);
+
+    this.infixParseFns.set(TokenType.PLUS, this.parseInfixExpression);
+    this.infixParseFns.set(TokenType.MINUS, this.parseInfixExpression);
+    this.infixParseFns.set(TokenType.ASTERISK, this.parseInfixExpression);
+    this.infixParseFns.set(TokenType.SLASH, this.parseInfixExpression);
+    this.infixParseFns.set(TokenType.LT, this.parseInfixExpression);
+    this.infixParseFns.set(TokenType.GT, this.parseInfixExpression);
+    this.infixParseFns.set(TokenType.EQ, this.parseInfixExpression);
+    this.infixParseFns.set(TokenType.NOT_EQ, this.parseInfixExpression);
   }
 
   private nextToken() {
@@ -51,6 +74,14 @@ export default class Parser {
     return this.peekToken.tokenType == tokenType;
   }
 
+  private peekPrecedence(): Precedence {
+    return PRECEDENCE_LEVELS.get(this.peekToken.tokenType) || Precedence.LOWEST;
+  }
+
+  private curPrecedence(): Precedence {
+    return PRECEDENCE_LEVELS.get(this.curToken.tokenType) || Precedence.LOWEST;
+  }
+
   private expectPeek(tokenType: TokenType): boolean {
     if (this.peekIs(tokenType)) {
       this.nextToken();
@@ -64,6 +95,10 @@ export default class Parser {
     this.errors.push(
       `expected next token to be ${tokenType}, got ${this.peekToken.tokenType} instead`
     );
+  }
+
+  private missingPrefixError(tokenType: TokenType) {
+    this.errors.push(`no prefix parse function for ${tokenType} found`);
   }
 
   parseProgram(): ast.Program | null {
@@ -133,16 +168,63 @@ export default class Parser {
     return new ast.ExpressionStatement(token, expression || undefined);
   }
 
-  parseExpression(_precedence: Precedence): ast.Expression | null {
+  parseExpression(precedence: Precedence): ast.Expression | null {
     const prefix = this.prefixParseFns.get(this.curToken.tokenType);
     if (!prefix) {
+      this.missingPrefixError(this.curToken.tokenType);
       return null;
     }
-    const leftExp = prefix();
+    let leftExp = prefix();
+
+    while (
+      !this.peekIs(TokenType.SEMICOLON) &&
+      precedence < this.peekPrecedence() &&
+      leftExp
+    ) {
+      const infix = this.infixParseFns.get(this.peekToken.tokenType);
+      if (!infix) {
+        return leftExp;
+      }
+      this.nextToken();
+      leftExp = infix(leftExp);
+    }
+
     return leftExp;
   }
 
   parseIdentifier = (): ast.Identifier => {
     return new ast.Identifier(this.curToken, this.curToken.literal);
+  };
+
+  parseIntegerLiteral = (): ast.IntegerLiteral => {
+    return new ast.IntegerLiteral(
+      this.curToken,
+      parseInt(this.curToken.literal, 10)
+    );
+  };
+
+  parsePrefixExpression = (): ast.PrefixExpression | null => {
+    const token = this.curToken;
+    const operator = this.curToken.literal;
+
+    this.nextToken();
+    const right = this.parseExpression(Precedence.PREFIX);
+    if (!right) {
+      return null;
+    }
+    return new ast.PrefixExpression(token, operator, right);
+  };
+
+  parseInfixExpression = (left: ast.Expression): ast.InfixExpression | null => {
+    const token = this.curToken;
+    const operator = this.curToken.literal;
+
+    const precedence = this.curPrecedence();
+    this.nextToken();
+    const right = this.parseExpression(precedence);
+    if (!right) {
+      return null;
+    }
+    return new ast.InfixExpression(token, left, operator, right);
   };
 }
