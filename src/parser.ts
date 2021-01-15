@@ -54,6 +54,7 @@ export default class Parser {
     this.prefixParseFns.set(TokenType.FALSE, this.parseBoolean);
     this.prefixParseFns.set(TokenType.LPAREN, this.parseGroupedExpression);
     this.prefixParseFns.set(TokenType.IF, this.parseIfExpression);
+    this.prefixParseFns.set(TokenType.FUNCTION, this.parseFunctionLiteral);
 
     this.infixParseFns.set(TokenType.PLUS, this.parseInfixExpression);
     this.infixParseFns.set(TokenType.MINUS, this.parseInfixExpression);
@@ -304,5 +305,49 @@ export default class Parser {
     }
 
     return block;
+  };
+
+  parseFunctionLiteral = (): ast.FunctionLiteral | null => {
+    const token = this.curToken;
+
+    if (!this.expectPeek(TokenType.LPAREN)) {
+      return null;
+    }
+
+    const parameters = this.parseFunctionParameters();
+    if (!parameters) {
+      return null;
+    }
+
+    if (!this.expectPeek(TokenType.LBRACE)) {
+      return null;
+    }
+
+    const body = this.parseBlockStatement();
+
+    return new ast.FunctionLiteral(token, parameters, body);
+  };
+
+  parseFunctionParameters = (): ast.Identifier[] | null => {
+    const identifiers: ast.Identifier[] = [];
+    this.nextToken();
+
+    if (this.currentIs(TokenType.RPAREN)) {
+      return identifiers;
+    }
+
+    identifiers.push(this.parseIdentifier());
+
+    while (this.peekIs(TokenType.COMMA)) {
+      this.nextToken();
+      this.nextToken();
+      identifiers.push(this.parseIdentifier());
+    }
+
+    if (!this.expectPeek(TokenType.RPAREN)) {
+      return null;
+    }
+
+    return identifiers;
   };
 }

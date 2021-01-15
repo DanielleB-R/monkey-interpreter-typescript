@@ -239,3 +239,26 @@ export class IfExpression extends Expression {
     }`;
   }
 }
+
+export class FunctionLiteral extends Expression {
+  token: Token;
+  parameters: Identifier[];
+  body: BlockStatement;
+
+  constructor(token: Token, parameters: Identifier[], body: BlockStatement) {
+    super();
+    this.token = token;
+    this.parameters = parameters;
+    this.body = body;
+  }
+
+  tokenLiteral(): string {
+    return this.token.literal;
+  }
+
+  repr(): string {
+    return `fn(${this.parameters
+      .map((ident) => ident.repr())
+      .join(", ")}) ${this.body.repr()}`;
+  }
+}

@@ -136,6 +136,44 @@ return 993322;`;
     checkIdentifier(extractExpression(alternative.statements[0]), "y");
   });
 
+  it("should parse function expressions correctly", () => {
+    const input = "fn(x, y) { x + y; }";
+    const expr = extractExpression(parseSingleStatement(input));
+
+    expect(expr).toBeInstanceOf(ast.FunctionLiteral);
+    const fnExpr = expr as ast.FunctionLiteral;
+
+    const expectedIdents = ["x", "y"];
+    fnExpr.parameters.forEach((param, i) =>
+      checkIdentifier(param, expectedIdents[i])
+    );
+
+    expect(fnExpr.body.statements).toHaveLength(1);
+    checkInfixExpression(
+      extractExpression(fnExpr.body.statements[0]),
+      "x",
+      "+",
+      "y"
+    );
+  });
+
+  it("should parse function parameters correctly", () => {
+    const cases: [string, string[]][] = [
+      ["fn() {}", []],
+      ["fn(x) {}", ["x"]],
+      ["fn(x, y, z) {}", ["x", "y", "z"]],
+    ];
+
+    cases.forEach(([input, names]) => {
+      const expr = extractExpression(parseSingleStatement(input));
+
+      expect(expr).toBeInstanceOf(ast.FunctionLiteral);
+      const fn = expr as ast.FunctionLiteral;
+
+      expect(fn.parameters.map((ident) => ident.repr())).toEqual(names);
+    });
+  });
+
   it("should resolve precedence correctly", () => {
     [
       ["-a * b", "((-a) * b)"],
