@@ -7,15 +7,7 @@ describe("Parser", () => {
     const input = `let x = 5;
 let y = 10;
 let foobar = 838383;`;
-
-    const parser = new Parser(new Lexer(input));
-
-    const output = parser.parseProgram();
-
-    expect(output).not.toBeNull();
-    expect(parser.errors).toHaveLength(0);
-
-    const program = output as ast.Program;
+    const program = parseInput(input);
 
     expect(program.statements).toHaveLength(3);
 
@@ -29,14 +21,7 @@ let foobar = 838383;`;
     const input = `return 5;
 return 10;
 return 993322;`;
-
-    const parser = new Parser(new Lexer(input));
-
-    const output = parser.parseProgram();
-
-    expect(output).not.toBeNull();
-    expect(parser.errors).toHaveLength(0);
-    const program = output as ast.Program;
+    const program = parseInput(input);
 
     expect(program.statements).toHaveLength(3);
 
@@ -48,73 +33,31 @@ return 993322;`;
 
   it("should parse identifier expressions correctly", () => {
     const input = "foobar;";
+    const stmt = parseSingleStatement(input);
 
-    const parser = new Parser(new Lexer(input));
-
-    const output = parser.parseProgram();
-
-    expect(output).not.toBeNull();
-    expect(parser.errors).toHaveLength(0);
-    const program = output as ast.Program;
-
-    expect(program.statements).toHaveLength(1);
-
-    const statement = program.statements[0];
-    expect(statement).toBeInstanceOf(ast.ExpressionStatement);
-    const exprStatement = statement as ast.ExpressionStatement;
-
-    expect(exprStatement.expression).toBeInstanceOf(ast.Identifier);
-    const ident = exprStatement.expression as ast.Identifier;
-
-    expect(ident.value).toBe("foobar");
-    expect(ident.tokenLiteral()).toBe("foobar");
+    checkIdentifier(extractExpression(stmt), "foobar");
   });
 
   it("should parse integer literals", () => {
     const input = "5;";
 
-    const parser = new Parser(new Lexer(input));
+    const stmt = parseSingleStatement(input);
 
-    const output = parser.parseProgram();
-
-    expect(output).not.toBeNull();
-    expect(parser.errors).toHaveLength(0);
-    const program = output as ast.Program;
-
-    expect(program.statements).toHaveLength(1);
-
-    const statement = program.statements[0];
-    expect(statement).toBeInstanceOf(ast.ExpressionStatement);
-    const exprStatement = statement as ast.ExpressionStatement;
-
-    expect(exprStatement.expression).toBeInstanceOf(ast.IntegerLiteral);
-    const literal = exprStatement.expression as ast.IntegerLiteral;
-
-    expect(literal.value).toBe(5);
-    expect(literal.tokenLiteral()).toBe("5");
+    checkIntegerLiteral(extractExpression(stmt), 5);
   });
 
   it("should parse boolean literals", () => {
     const input = "true;false;";
-
-    const parser = new Parser(new Lexer(input));
-
-    const output = parser.parseProgram();
-
-    expect(output).not.toBeNull();
-    expect(parser.errors).toHaveLength(0);
-    const program = output as ast.Program;
+    const program = parseInput(input);
 
     expect(program.statements).toHaveLength(2);
 
     const expectedValues = [true, false];
 
     program.statements.forEach((statement, i) => {
-      expect(statement).toBeInstanceOf(ast.ExpressionStatement);
-      const exprStatement = statement as ast.ExpressionStatement;
-
-      expect(exprStatement.expression).toBeInstanceOf(ast.BooleanLiteral);
-      const literal = exprStatement.expression as ast.BooleanLiteral;
+      const expr = extractExpression(statement);
+      expect(expr).toBeInstanceOf(ast.BooleanLiteral);
+      const literal = expr as ast.BooleanLiteral;
 
       expect(literal.value).toBe(expectedValues[i]);
     });
@@ -127,22 +70,10 @@ return 993322;`;
     ];
 
     cases.forEach(([input, operator, integerValue]) => {
-      const parser = new Parser(new Lexer(input));
+      const expr = extractExpression(parseSingleStatement(input));
 
-      const output = parser.parseProgram();
-
-      expect(output).not.toBeNull();
-      expect(parser.errors).toHaveLength(0);
-      const program = output as ast.Program;
-
-      expect(program.statements).toHaveLength(1);
-
-      const statement = program.statements[0];
-      expect(statement).toBeInstanceOf(ast.ExpressionStatement);
-      const exprStatement = statement as ast.ExpressionStatement;
-
-      expect(exprStatement.expression).toBeInstanceOf(ast.PrefixExpression);
-      const prefix = exprStatement.expression as ast.PrefixExpression;
+      expect(expr).toBeInstanceOf(ast.PrefixExpression);
+      const prefix = expr as ast.PrefixExpression;
 
       expect(prefix.operator).toBe(operator);
       checkIntegerLiteral(prefix.right, integerValue);
@@ -162,94 +93,47 @@ return 993322;`;
     ];
 
     cases.forEach(([input, leftValue, operator, rightValue]) => {
-      const parser = new Parser(new Lexer(input));
-
-      const output = parser.parseProgram();
-
-      expect(output).not.toBeNull();
-      expect(parser.errors).toHaveLength(0);
-      const program = output as ast.Program;
-
-      expect(program.statements).toHaveLength(1);
-
-      const statement = program.statements[0];
-      expect(statement).toBeInstanceOf(ast.ExpressionStatement);
-      const exprStatement = statement as ast.ExpressionStatement;
-
-      expect(exprStatement.expression).toBeInstanceOf(ast.InfixExpression);
-      const infix = exprStatement.expression as ast.InfixExpression;
-
-      checkIntegerLiteral(infix.left, leftValue);
-      expect(infix.operator).toBe(operator);
-      checkIntegerLiteral(infix.right, rightValue);
+      checkInfixExpression(
+        extractExpression(parseSingleStatement(input)),
+        leftValue,
+        operator,
+        rightValue
+      );
     });
   });
 
   it("should parse if expressions correctly", () => {
     const input = "if (x < y) { x }";
-    const parser = new Parser(new Lexer(input));
+    const expr = extractExpression(parseSingleStatement(input));
 
-    const output = parser.parseProgram();
-
-    expect(output).not.toBeNull();
-    expect(parser.errors).toHaveLength(0);
-    const program = output as ast.Program;
-
-    expect(program.statements).toHaveLength(1);
-
-    const statement = program.statements[0];
-    expect(statement).toBeInstanceOf(ast.ExpressionStatement);
-    const exprStatement = statement as ast.ExpressionStatement;
-
-    expect(exprStatement.expression).toBeInstanceOf(ast.IfExpression);
-    const ifExpr = exprStatement.expression as ast.IfExpression;
+    expect(expr).toBeInstanceOf(ast.IfExpression);
+    const ifExpr = expr as ast.IfExpression;
 
     checkInfixExpression(ifExpr.condition, "x", "<", "y");
 
-    const consequenceStatement = ifExpr.consequence.statements[0];
-    expect(consequenceStatement).toBeInstanceOf(ast.ExpressionStatement);
-    const consequenceExpr = (consequenceStatement as ast.ExpressionStatement)
-      .expression;
-    checkIdentifier(consequenceExpr, "x");
+    expect(ifExpr.consequence.statements).toHaveLength(1);
+    checkIdentifier(extractExpression(ifExpr.consequence.statements[0]), "x");
 
     expect(ifExpr.alternative).toBeFalsy();
   });
 
   it("should parse if/else expressions correctly", () => {
     const input = "if (x < y) { x } else { y }";
-    const parser = new Parser(new Lexer(input));
+    const expr = extractExpression(parseSingleStatement(input));
 
-    const output = parser.parseProgram();
-
-    expect(output).not.toBeNull();
-    expect(parser.errors).toHaveLength(0);
-    const program = output as ast.Program;
-
-    expect(program.statements).toHaveLength(1);
-
-    const statement = program.statements[0];
-    expect(statement).toBeInstanceOf(ast.ExpressionStatement);
-    const exprStatement = statement as ast.ExpressionStatement;
-
-    expect(exprStatement.expression).toBeInstanceOf(ast.IfExpression);
-    const ifExpr = exprStatement.expression as ast.IfExpression;
+    expect(expr).toBeInstanceOf(ast.IfExpression);
+    const ifExpr = expr as ast.IfExpression;
 
     checkInfixExpression(ifExpr.condition, "x", "<", "y");
 
-    const consequenceStatement = ifExpr.consequence.statements[0];
-    expect(consequenceStatement).toBeInstanceOf(ast.ExpressionStatement);
-    const consequenceExpr = (consequenceStatement as ast.ExpressionStatement)
-      .expression;
-    checkIdentifier(consequenceExpr, "x");
+    expect(ifExpr.consequence.statements).toHaveLength(1);
+    checkIdentifier(extractExpression(ifExpr.consequence.statements[0]), "x");
 
     expect(ifExpr.alternative).toBeTruthy();
     const alternative = ifExpr.alternative as ast.BlockStatement;
 
-    const alternativeStatment = alternative.statements[0];
-    expect(alternativeStatment).toBeInstanceOf(ast.ExpressionStatement);
-    const alternativeExpr = (alternativeStatment as ast.ExpressionStatement)
-      .expression;
-    checkIdentifier(alternativeExpr, "y");
+    expect(alternative.statements).toHaveLength(1);
+    checkIdentifier(extractExpression(alternative.statements[0]), "y");
   });
 
   it("should resolve precedence correctly", () => {
@@ -277,18 +161,27 @@ return 993322;`;
       ["-(5 + 5)", "(-(5 + 5))"],
       ["!(true == true)", "(!(true == true))"],
     ].forEach(([input, result]) => {
-      const parser = new Parser(new Lexer(input));
-
-      const output = parser.parseProgram();
-
-      expect(output).not.toBeNull();
-      expect(parser.errors).toHaveLength(0);
-      const program = output as ast.Program;
-
-      expect(program.repr()).toBe(result);
+      expect(parseInput(input).repr()).toBe(result);
     });
   });
 });
+
+const parseInput = (input: string): ast.Program => {
+  const parser = new Parser(new Lexer(input));
+
+  const output = parser.parseProgram();
+
+  expect(output).not.toBeNull();
+  expect(parser.errors).toHaveLength(0);
+  return output as ast.Program;
+};
+
+const parseSingleStatement = (input: string): ast.Statement => {
+  const program = parseInput(input);
+  expect(program.statements).toHaveLength(1);
+
+  return program.statements[0] as ast.Statement;
+};
 
 const checkLetStatement = (statement: ast.Statement, identifier: string) => {
   expect(statement.tokenLiteral()).toBe("let");
@@ -299,7 +192,10 @@ const checkLetStatement = (statement: ast.Statement, identifier: string) => {
   expect(letStatement.name.tokenLiteral()).toBe(identifier);
 };
 
-const checkIntegerLiteral = (expr: ast.Expression, integerValue: number) => {
+const checkIntegerLiteral = (
+  expr: ast.Expression | undefined,
+  integerValue: number
+) => {
   expect(expr).toBeInstanceOf(ast.IntegerLiteral);
   const literal = expr as ast.IntegerLiteral;
 
@@ -335,4 +231,13 @@ const checkInfixExpression = (
   checkItem(infix.left, left);
   expect(infix.operator).toBe(operator);
   checkItem(infix.right, right);
+};
+
+// Type coercion stuff
+const extractExpression = (stmt: ast.Statement): ast.Expression => {
+  expect(stmt).toBeInstanceOf(ast.ExpressionStatement);
+  const expr = (stmt as ast.ExpressionStatement).expression;
+
+  expect(expr).toBeInstanceOf(ast.Expression);
+  return expr as ast.Expression;
 };
