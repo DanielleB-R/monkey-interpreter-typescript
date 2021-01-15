@@ -21,6 +21,7 @@ const PRECEDENCE_LEVELS: Map<TokenType, Precedence> = new Map([
   [TokenType.MINUS, Precedence.SUM],
   [TokenType.ASTERISK, Precedence.PRODUCT],
   [TokenType.SLASH, Precedence.PRODUCT],
+  [TokenType.LPAREN, Precedence.CALL],
 ]);
 
 interface PrefixParseFn {
@@ -64,6 +65,7 @@ export default class Parser {
     this.infixParseFns.set(TokenType.GT, this.parseInfixExpression);
     this.infixParseFns.set(TokenType.EQ, this.parseInfixExpression);
     this.infixParseFns.set(TokenType.NOT_EQ, this.parseInfixExpression);
+    this.infixParseFns.set(TokenType.LPAREN, this.parseCallExpression);
   }
 
   private nextToken() {
@@ -142,35 +144,49 @@ export default class Parser {
       return null;
     }
 
-    // TODO: Just go to the end of the statement for now
-    while (!this.currentIs(TokenType.SEMICOLON)) {
+    this.nextToken();
+
+    const expr = this.parseExpression(Precedence.LOWEST);
+    if (!expr) {
+      return null;
+    }
+
+    if (this.peekIs(TokenType.SEMICOLON)) {
       this.nextToken();
     }
 
-    return new ast.LetStatement(token, name);
+    return new ast.LetStatement(token, name, expr);
   }
 
   parseReturnStatement(): ast.ReturnStatement | null {
     const token = this.curToken;
+    this.nextToken();
 
-    // TODO: Just go to the end of the statement for now
-    while (!this.currentIs(TokenType.SEMICOLON)) {
+    const expr = this.parseExpression(Precedence.LOWEST);
+    if (!expr) {
+      return null;
+    }
+
+    if (this.peekIs(TokenType.SEMICOLON)) {
       this.nextToken();
     }
 
-    return new ast.ReturnStatement(token);
+    return new ast.ReturnStatement(token, expr);
   }
 
   parseExpressionStatement(): ast.ExpressionStatement | null {
     const token = this.curToken;
 
     const expression = this.parseExpression(Precedence.LOWEST);
+    if (!expression) {
+      return null;
+    }
 
     if (this.peekIs(TokenType.SEMICOLON)) {
       this.nextToken();
     }
 
-    return new ast.ExpressionStatement(token, expression || undefined);
+    return new ast.ExpressionStatement(token, expression);
   }
 
   parseExpression(precedence: Precedence): ast.Expression | null {
@@ -349,5 +365,45 @@ export default class Parser {
     }
 
     return identifiers;
+  };
+
+  parseCallExpression = (left: ast.Expression): ast.CallExpression | null => {
+    const token = this.curToken;
+    const args = this.parseCallArguments();
+    if (!args) {
+      return null;
+    }
+    return new ast.CallExpression(token, left, args);
+  };
+
+  parseCallArguments = (): ast.Expression[] | null => {
+    const args: ast.Expression[] = [];
+    this.nextToken();
+
+    if (this.currentIs(TokenType.RPAREN)) {
+      return args;
+    }
+
+    const expr = this.parseExpression(Precedence.LOWEST);
+    if (!expr) {
+      return expr;
+    }
+    args.push(expr);
+
+    while (this.peekIs(TokenType.COMMA)) {
+      this.nextToken();
+      this.nextToken();
+      const expr = this.parseExpression(Precedence.LOWEST);
+      if (!expr) {
+        return null;
+      }
+      args.push(expr);
+    }
+
+    if (!this.expectPeek(TokenType.RPAREN)) {
+      return null;
+    }
+
+    return args;
   };
 }

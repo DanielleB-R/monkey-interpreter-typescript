@@ -2,32 +2,39 @@ import Parser from "../src/parser";
 import Lexer from "../src/lexer";
 import * as ast from "../src/ast";
 
+type Item = string | number | boolean;
+
 describe("Parser", () => {
   it("should parse let statements correctly", () => {
-    const input = `let x = 5;
-let y = 10;
-let foobar = 838383;`;
-    const program = parseInput(input);
+    const cases: [string, string, Item][] = [
+      ["let x = 5;", "x", 5],
+      ["let y = true", "y", true],
+      ["let foobar = y;", "foobar", "y"],
+    ];
 
-    expect(program.statements).toHaveLength(3);
+    cases.forEach(([input, ident, value]) => {
+      const stmt = parseSingleStatement(input);
 
-    const expectedIdentifiers = ["x", "y", "foobar"];
-    program.statements.forEach((statement, i) =>
-      checkLetStatement(statement, expectedIdentifiers[i])
-    );
+      checkLetStatement(stmt, ident, value);
+    });
   });
 
   it("should parse return statements correctly", () => {
     const input = `return 5;
-return 10;
-return 993322;`;
+return true;
+return x;`;
     const program = parseInput(input);
 
     expect(program.statements).toHaveLength(3);
 
-    program.statements.forEach((statement) => {
+    const returnValues: Item[] = [5, true, "x"];
+    program.statements.forEach((statement, i) => {
       expect(statement.tokenLiteral()).toBe("return");
       expect(statement).toBeInstanceOf(ast.ReturnStatement);
+      const ret = statement as ast.ReturnStatement;
+
+      expect(ret.returnValue).toBeDefined();
+      if (ret.returnValue) checkItem(ret.returnValue, returnValues[i]);
     });
   });
 
@@ -174,6 +181,21 @@ return 993322;`;
     });
   });
 
+  it("should parse function calls correctly", () => {
+    const input = "add(1, 2 * 3, 4 + 5)";
+    const expr = extractExpression(parseSingleStatement(input));
+
+    expect(expr).toBeInstanceOf(ast.CallExpression);
+    const call = expr as ast.CallExpression;
+
+    checkIdentifier(call.fn, "add");
+
+    expect(call.args).toHaveLength(3);
+    checkIntegerLiteral(call.args[0], 1);
+    checkInfixExpression(call.args[1], 2, "*", 3);
+    checkInfixExpression(call.args[2], 4, "+", 5);
+  });
+
   it("should resolve precedence correctly", () => {
     [
       ["-a * b", "((-a) * b)"],
@@ -198,6 +220,12 @@ return 993322;`;
       ["(5 + 5) * 2 * (5 + 5)", "(((5 + 5) * 2) * (5 + 5))"],
       ["-(5 + 5)", "(-(5 + 5))"],
       ["!(true == true)", "(!(true == true))"],
+      ["a + add(b * c) + d", "((a + add((b * c))) + d)"],
+      [
+        "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+        "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+      ],
+      ["add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"],
     ].forEach(([input, result]) => {
       expect(parseInput(input).repr()).toBe(result);
     });
@@ -221,13 +249,19 @@ const parseSingleStatement = (input: string): ast.Statement => {
   return program.statements[0] as ast.Statement;
 };
 
-const checkLetStatement = (statement: ast.Statement, identifier: string) => {
+const checkLetStatement = (
+  statement: ast.Statement,
+  identifier: string,
+  value: Item
+) => {
   expect(statement.tokenLiteral()).toBe("let");
   expect(statement).toBeInstanceOf(ast.LetStatement);
   const letStatement = statement as ast.LetStatement;
 
   expect(letStatement.name.value).toBe(identifier);
   expect(letStatement.name.tokenLiteral()).toBe(identifier);
+
+  checkItem(letStatement.value, value);
 };
 
 const checkIntegerLiteral = (
@@ -249,11 +283,24 @@ const checkIdentifier = (expr: ast.Expression | undefined, name: string) => {
   expect(ident.tokenLiteral()).toBe(name);
 };
 
-const checkItem = (expr: ast.Expression, value: string | number) => {
+const checkBooleanLiteral = (
+  expr: ast.Expression | undefined,
+  boolValue: boolean
+) => {
+  expect(expr).toBeInstanceOf(ast.BooleanLiteral);
+  const literal = expr as ast.BooleanLiteral;
+
+  expect(literal.value).toBe(boolValue);
+  expect(literal.tokenLiteral()).toBe(`${boolValue}`);
+};
+
+const checkItem = (expr: ast.Expression, value: Item) => {
   if (typeof value === "string") {
     checkIdentifier(expr, value);
   } else if (typeof value === "number") {
     checkIntegerLiteral(expr, value);
+  } else if (typeof value === "boolean") {
+    checkBooleanLiteral(expr, value);
   }
 };
 

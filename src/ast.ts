@@ -26,9 +26,9 @@ export class Program extends Node {
 export class LetStatement extends Statement {
   token: Token;
   name: Identifier;
-  value?: Expression;
+  value: Expression;
 
-  constructor(token: Token, name: Identifier, value?: Expression) {
+  constructor(token: Token, name: Identifier, value: Expression) {
     super();
     this.token = token;
     this.name = name;
@@ -40,17 +40,15 @@ export class LetStatement extends Statement {
   }
 
   repr(): string {
-    return `${this.tokenLiteral()} ${this.name.repr()} = ${
-      this.value ? this.value.repr() : ""
-    };`;
+    return `${this.tokenLiteral()} ${this.name.repr()} = ${this.value.repr()};`;
   }
 }
 
 export class ReturnStatement extends Statement {
   token: Token;
-  returnValue?: Expression;
+  returnValue: Expression;
 
-  constructor(token: Token, returnValue?: Expression) {
+  constructor(token: Token, returnValue: Expression) {
     super();
     this.token = token;
     this.returnValue = returnValue;
@@ -69,9 +67,9 @@ export class ReturnStatement extends Statement {
 
 export class ExpressionStatement extends Statement {
   token: Token;
-  expression?: Expression;
+  expression: Expression;
 
-  constructor(token: Token, expression?: Expression) {
+  constructor(token: Token, expression: Expression) {
     super();
     this.token = token;
     this.expression = expression;
@@ -82,7 +80,7 @@ export class ExpressionStatement extends Statement {
   }
 
   repr(): string {
-    return `${this.expression ? this.expression.repr() : ""}`;
+    return this.expression.repr();
   }
 }
 
@@ -260,5 +258,28 @@ export class FunctionLiteral extends Expression {
     return `fn(${this.parameters
       .map((ident) => ident.repr())
       .join(", ")}) ${this.body.repr()}`;
+  }
+}
+
+export class CallExpression extends Expression {
+  token: Token;
+  fn: Expression;
+  args: Expression[];
+
+  constructor(token: Token, fn: Expression, args: Expression[]) {
+    super();
+    this.token = token;
+    this.fn = fn;
+    this.args = args;
+  }
+
+  tokenLiteral(): string {
+    return this.token.literal;
+  }
+
+  repr(): string {
+    return `${this.fn.repr()}(${this.args
+      .map((arg) => arg.repr())
+      .join(", ")})`;
   }
 }
