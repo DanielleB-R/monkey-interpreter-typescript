@@ -1,5 +1,6 @@
 import * as readline from "readline";
 import Lexer from "./lexer";
+import Parser from "./parser";
 import { TokenType } from "./token";
 
 const PROMPT = ">> ";
@@ -17,13 +18,15 @@ const startRepl = async () => {
     const input = await ask(rl, PROMPT);
 
     const lexer = new Lexer(input);
-    while (true) {
-      const token = lexer.nextToken();
-      if (token.tokenType == TokenType.EOF) {
-        break;
-      }
-      console.log(token);
+    const parser = new Parser(lexer);
+    const program = parser.parseProgram();
+
+    if (parser.errors.length > 0 || !program) {
+      console.log(parser.errors.join("\n\t"));
+      continue;
     }
+
+    console.log(program.repr());
   }
 };
 
