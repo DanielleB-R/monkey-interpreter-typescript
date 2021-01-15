@@ -53,6 +53,7 @@ export default class Parser {
     this.prefixParseFns.set(TokenType.TRUE, this.parseBoolean);
     this.prefixParseFns.set(TokenType.FALSE, this.parseBoolean);
     this.prefixParseFns.set(TokenType.LPAREN, this.parseGroupedExpression);
+    this.prefixParseFns.set(TokenType.IF, this.parseIfExpression);
 
     this.infixParseFns.set(TokenType.PLUS, this.parseInfixExpression);
     this.infixParseFns.set(TokenType.MINUS, this.parseInfixExpression);
@@ -246,5 +247,62 @@ export default class Parser {
       return null;
     }
     return new ast.InfixExpression(token, left, operator, right);
+  };
+
+  parseIfExpression = (): ast.IfExpression | null => {
+    const token = this.curToken;
+
+    if (!this.expectPeek(TokenType.LPAREN)) {
+      return null;
+    }
+
+    this.nextToken();
+    const condition = this.parseExpression(Precedence.LOWEST);
+    if (!condition) {
+      return null;
+    }
+
+    if (!this.expectPeek(TokenType.RPAREN)) {
+      return null;
+    }
+
+    if (!this.expectPeek(TokenType.LBRACE)) {
+      return null;
+    }
+
+    const consequence = this.parseBlockStatement();
+    if (!consequence) {
+      return null;
+    }
+
+    if (!this.peekIs(TokenType.ELSE)) {
+      return new ast.IfExpression(token, condition, consequence);
+    }
+
+    this.nextToken();
+    if (!this.expectPeek(TokenType.LBRACE)) {
+      return null;
+    }
+
+    const alternative = this.parseBlockStatement();
+    return new ast.IfExpression(token, condition, consequence, alternative);
+  };
+
+  parseBlockStatement = (): ast.BlockStatement => {
+    const block = new ast.BlockStatement(this.curToken);
+
+    this.nextToken();
+
+    while (
+      !(this.currentIs(TokenType.RBRACE) || this.currentIs(TokenType.EOF))
+    ) {
+      const statement = this.parseStatement();
+      if (statement) {
+        block.statements.push(statement);
+      }
+      this.nextToken();
+    }
+
+    return block;
   };
 }

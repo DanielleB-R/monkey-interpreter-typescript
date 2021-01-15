@@ -86,6 +86,24 @@ export class ExpressionStatement extends Statement {
   }
 }
 
+export class BlockStatement extends Statement {
+  token: Token;
+  statements: Statement[] = [];
+
+  constructor(token: Token) {
+    super();
+    this.token = token;
+  }
+
+  tokenLiteral(): string {
+    return this.token.literal;
+  }
+
+  repr(): string {
+    return this.statements.map((statement) => statement.repr()).join("");
+  }
+}
+
 export class Identifier extends Expression {
   token: Token;
   value: string;
@@ -189,5 +207,35 @@ export class InfixExpression extends Expression {
 
   repr(): string {
     return `(${this.left.repr()} ${this.operator} ${this.right.repr()})`;
+  }
+}
+
+export class IfExpression extends Expression {
+  token: Token;
+  condition: Expression;
+  consequence: BlockStatement;
+  alternative?: BlockStatement;
+
+  constructor(
+    token: Token,
+    condition: Expression,
+    consequence: BlockStatement,
+    alternative?: BlockStatement
+  ) {
+    super();
+    this.token = token;
+    this.condition = condition;
+    this.consequence = consequence;
+    this.alternative = alternative;
+  }
+
+  tokenLiteral(): string {
+    return this.token.literal;
+  }
+
+  repr(): string {
+    return `if${this.condition.repr()} ${this.consequence.repr()}${
+      this.alternative ? `else ${this.alternative.repr}` : ""
+    }`;
   }
 }

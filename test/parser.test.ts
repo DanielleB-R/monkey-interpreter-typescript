@@ -185,6 +185,73 @@ return 993322;`;
     });
   });
 
+  it("should parse if expressions correctly", () => {
+    const input = "if (x < y) { x }";
+    const parser = new Parser(new Lexer(input));
+
+    const output = parser.parseProgram();
+
+    expect(output).not.toBeNull();
+    expect(parser.errors).toHaveLength(0);
+    const program = output as ast.Program;
+
+    expect(program.statements).toHaveLength(1);
+
+    const statement = program.statements[0];
+    expect(statement).toBeInstanceOf(ast.ExpressionStatement);
+    const exprStatement = statement as ast.ExpressionStatement;
+
+    expect(exprStatement.expression).toBeInstanceOf(ast.IfExpression);
+    const ifExpr = exprStatement.expression as ast.IfExpression;
+
+    checkInfixExpression(ifExpr.condition, "x", "<", "y");
+
+    const consequenceStatement = ifExpr.consequence.statements[0];
+    expect(consequenceStatement).toBeInstanceOf(ast.ExpressionStatement);
+    const consequenceExpr = (consequenceStatement as ast.ExpressionStatement)
+      .expression;
+    checkIdentifier(consequenceExpr, "x");
+
+    expect(ifExpr.alternative).toBeFalsy();
+  });
+
+  it("should parse if/else expressions correctly", () => {
+    const input = "if (x < y) { x } else { y }";
+    const parser = new Parser(new Lexer(input));
+
+    const output = parser.parseProgram();
+
+    expect(output).not.toBeNull();
+    expect(parser.errors).toHaveLength(0);
+    const program = output as ast.Program;
+
+    expect(program.statements).toHaveLength(1);
+
+    const statement = program.statements[0];
+    expect(statement).toBeInstanceOf(ast.ExpressionStatement);
+    const exprStatement = statement as ast.ExpressionStatement;
+
+    expect(exprStatement.expression).toBeInstanceOf(ast.IfExpression);
+    const ifExpr = exprStatement.expression as ast.IfExpression;
+
+    checkInfixExpression(ifExpr.condition, "x", "<", "y");
+
+    const consequenceStatement = ifExpr.consequence.statements[0];
+    expect(consequenceStatement).toBeInstanceOf(ast.ExpressionStatement);
+    const consequenceExpr = (consequenceStatement as ast.ExpressionStatement)
+      .expression;
+    checkIdentifier(consequenceExpr, "x");
+
+    expect(ifExpr.alternative).toBeTruthy();
+    const alternative = ifExpr.alternative as ast.BlockStatement;
+
+    const alternativeStatment = alternative.statements[0];
+    expect(alternativeStatment).toBeInstanceOf(ast.ExpressionStatement);
+    const alternativeExpr = (alternativeStatment as ast.ExpressionStatement)
+      .expression;
+    checkIdentifier(alternativeExpr, "y");
+  });
+
   it("should resolve precedence correctly", () => {
     [
       ["-a * b", "((-a) * b)"],
@@ -238,4 +305,34 @@ const checkIntegerLiteral = (expr: ast.Expression, integerValue: number) => {
 
   expect(literal.value).toBe(integerValue);
   expect(literal.tokenLiteral()).toBe(`${integerValue}`);
+};
+
+const checkIdentifier = (expr: ast.Expression | undefined, name: string) => {
+  expect(expr).toBeInstanceOf(ast.Identifier);
+  let ident = expr as ast.Identifier;
+
+  expect(ident.value).toBe(name);
+  expect(ident.tokenLiteral()).toBe(name);
+};
+
+const checkItem = (expr: ast.Expression, value: string | number) => {
+  if (typeof value === "string") {
+    checkIdentifier(expr, value);
+  } else if (typeof value === "number") {
+    checkIntegerLiteral(expr, value);
+  }
+};
+
+const checkInfixExpression = (
+  expr: ast.Expression | undefined,
+  left: string | number,
+  operator: string,
+  right: string | number
+) => {
+  expect(expr).toBeInstanceOf(ast.InfixExpression);
+  const infix = expr as ast.InfixExpression;
+
+  checkItem(infix.left, left);
+  expect(infix.operator).toBe(operator);
+  checkItem(infix.right, right);
 };
