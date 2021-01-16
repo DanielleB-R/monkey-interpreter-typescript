@@ -108,7 +108,7 @@ export default class Parser {
     this.errors.push(`no prefix parse function for ${tokenType} found`);
   }
 
-  parseProgram(): ast.Program | null {
+  parseProgram(): ast.Program {
     const program = new ast.Program();
 
     while (!this.currentIs(TokenType.EOF)) {

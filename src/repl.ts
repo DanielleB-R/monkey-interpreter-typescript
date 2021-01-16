@@ -1,7 +1,7 @@
 import * as readline from "readline";
 import Lexer from "./lexer";
 import Parser from "./parser";
-import { TokenType } from "./token";
+import monkeyEval from "./evaluator";
 
 const PROMPT = ">> ";
 
@@ -26,7 +26,7 @@ const startRepl = async () => {
       continue;
     }
 
-    console.log(program.repr());
+    console.log(monkeyEval(program).inspect());
   }
 };
 
