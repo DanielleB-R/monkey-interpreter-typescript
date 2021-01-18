@@ -3,15 +3,17 @@ import Parser from "../src/parser";
 import monkeyEval from "../src/evaluator";
 import * as o from "../src/object";
 
+const integerTest = (input: string, output: number) => {
+  const result = testEval(input);
+
+  checkIntegerObject(result, output);
+};
+
 describe("monkeyEval", () => {
   it.each([
     ["5", 5],
     ["10", 10],
-  ])("should evaluate integer literal (%s) as itself", (input, output) => {
-    const result = testEval(input);
-
-    checkIntegerObject(result, output);
-  });
+  ])("should evaluate integer literal (%s) as itself", integerTest);
 
   it.each([
     ["true", true],
@@ -52,11 +54,7 @@ describe("monkeyEval", () => {
     ["3 * 3 * 3 + 10", 37],
     ["3 * (3 * 3) + 10", 37],
     ["(5 + 10 * 2 + 15 / 3) * 2 + -10", 50],
-  ])("should evaluate arithmetic in (%s) correctly", (input, output) => {
-    const result = testEval(input);
-
-    checkIntegerObject(result, output);
-  });
+  ])("should evaluate arithmetic in (%s) correctly", integerTest);
 
   it.each([
     ["1 < 2", true],
@@ -81,6 +79,37 @@ describe("monkeyEval", () => {
 
     checkBooleanObject(result, output);
   });
+
+  it.each([
+    ["if (true) { 10 }", 10],
+    ["if (false) { 10 }", null],
+    ["if (1) { 10 }", 10],
+    ["if (1 < 2) { 10 }", 10],
+    ["if (1 > 2) { 10 }", null],
+    ["if (1 > 2) { 10 } else { 20 }", 20],
+    ["if (1 < 2) { 10 } else { 20 }", 10],
+  ])("should evaluate (%s) as a conditional", (input, output) => {
+    const result = testEval(input);
+
+    if (output === null) {
+      checkNullObject(result);
+    } else {
+      checkIntegerObject(result, output);
+    }
+  });
+
+  it.each([
+    ["return 10;", 10],
+    ["return 10; 9;", 10],
+    ["return 2 * 5; 9;", 10],
+    ["9; return 2 * 5; 9;", 10],
+    [
+      `if (10 > 1) { if (10 > 1) {
+return 10; }
+return 1; }`,
+      10,
+    ],
+  ])("should evaluate return statements correctly in (%s)", integerTest);
 });
 
 const testEval = (input: string): o.MonkeyObject => {
@@ -104,4 +133,8 @@ const checkBooleanObject = (result: o.MonkeyObject, b: boolean) => {
   const boolObj = result as o.MonkeyBoolean;
 
   expect(boolObj.value).toBe(b);
+};
+
+const checkNullObject = (result: o.MonkeyObject) => {
+  expect(result).toBeInstanceOf(o.MonkeyNull);
 };

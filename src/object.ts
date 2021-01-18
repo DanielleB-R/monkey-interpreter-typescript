@@ -2,6 +2,7 @@ export enum ObjectType {
   INTEGER = "INTEGER",
   BOOLEAN = "BOOLEAN",
   NULL = "NULL",
+  RETURN = "RETURN",
 }
 
 export abstract class MonkeyObject {
@@ -47,5 +48,18 @@ export class MonkeyNull extends MonkeyObject {
 
   inspect(): string {
     return "null";
+  }
+}
+
+export class ReturnValue extends MonkeyObject {
+  value: MonkeyObject;
+
+  constructor(value: MonkeyObject) {
+    super(ObjectType.RETURN);
+    this.value = value;
+  }
+
+  inspect(): string {
+    return this.value.inspect();
   }
 }

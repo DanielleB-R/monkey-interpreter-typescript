@@ -9,10 +9,17 @@ const objectifyBoolean = (b: boolean): o.MonkeyBoolean => (b ? TRUE : FALSE);
 
 const monkeyEval = (node: ast.Node): o.MonkeyObject => {
   if (node instanceof ast.Program) {
-    return evalStatements(node.statements);
+    return evalProgram(node);
   }
   if (node instanceof ast.ExpressionStatement) {
     return monkeyEval(node.expression);
+  }
+  if (node instanceof ast.BlockStatement) {
+    return evalBlock(node);
+  }
+  if (node instanceof ast.ReturnStatement) {
+    const returnValue = monkeyEval(node.returnValue);
+    return new o.ReturnValue(returnValue);
   }
   if (node instanceof ast.IntegerLiteral) {
     return new o.MonkeyInteger(node.value);
@@ -29,12 +36,35 @@ const monkeyEval = (node: ast.Node): o.MonkeyObject => {
     const right = monkeyEval(node.right);
     return evalInfixExpression(left, node.operator, right);
   }
+  if (node instanceof ast.IfExpression) {
+    return evalConditionalExpression(node);
+  }
 
-  return NULL;
+  throw "Unimplemented!";
 };
 
-const evalStatements = (statements: ast.Statement[]): o.MonkeyObject => {
-  return statements.reduce((_, stmt) => monkeyEval(stmt), NULL);
+const evalProgram = (program: ast.Program): o.MonkeyObject => {
+  let result: o.MonkeyObject = NULL;
+  for (const stmt of program.statements) {
+    result = monkeyEval(stmt);
+
+    if (result instanceof o.ReturnValue) {
+      return result.value;
+    }
+  }
+  return result;
+};
+
+const evalBlock = (block: ast.BlockStatement): o.MonkeyObject => {
+  let result: o.MonkeyObject = NULL;
+  for (const stmt of block.statements) {
+    result = monkeyEval(stmt);
+
+    if (result instanceof o.ReturnValue) {
+      return result;
+    }
+  }
+  return result;
 };
 
 interface UnaryEvaluator {
@@ -168,5 +198,22 @@ const evalInfixExpression = (
   }
   return evaluator(left, right);
 };
+
+const evalConditionalExpression = (expr: ast.IfExpression): o.MonkeyObject => {
+  const condition = monkeyEval(expr.condition);
+
+  if (isTruthy(condition)) {
+    return monkeyEval(expr.consequence);
+  } else {
+    if (expr.alternative) {
+      return monkeyEval(expr.alternative);
+    } else {
+      return NULL;
+    }
+  }
+};
+
+const isTruthy = (obj: o.MonkeyObject): boolean =>
+  obj !== FALSE && obj !== NULL;
 
 export default monkeyEval;
