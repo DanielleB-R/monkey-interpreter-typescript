@@ -5,19 +5,18 @@ import * as ast from "../src/ast";
 type Item = string | number | boolean;
 
 describe("Parser", () => {
-  it("should parse let statements correctly", () => {
-    const cases: [string, string, Item][] = [
-      ["let x = 5;", "x", 5],
-      ["let y = true", "y", true],
-      ["let foobar = y;", "foobar", "y"],
-    ];
-
-    cases.forEach(([input, ident, value]) => {
+  it.each([
+    ["let x = 5;", "x", 5],
+    ["let y = true", "y", true],
+    ["let foobar = y;", "foobar", "y"],
+  ])(
+    "should parse (%s) as a let statement",
+    (input: string, ident: string, value: Item) => {
       const stmt = parseSingleStatement(input);
 
       checkLetStatement(stmt, ident, value);
-    });
-  });
+    }
+  );
 
   it("should parse return statements correctly", () => {
     const input = `return 5;
@@ -70,13 +69,12 @@ return x;`;
     });
   });
 
-  it("should parse prefix expressions correctly", () => {
-    const cases: [string, string, number][] = [
-      ["!5;", "!", 5],
-      ["-15;", "-", 15],
-    ];
-
-    cases.forEach(([input, operator, integerValue]) => {
+  it.each([
+    ["!5;", "!", 5],
+    ["-15;", "-", 15],
+  ])(
+    "should parse (%s) as a prefix expression",
+    (input: string, operator: string, integerValue: number) => {
       const expr = extractExpression(parseSingleStatement(input));
 
       expect(expr).toBeInstanceOf(ast.PrefixExpression);
@@ -84,30 +82,34 @@ return x;`;
 
       expect(prefix.operator).toBe(operator);
       checkIntegerLiteral(prefix.right, integerValue);
-    });
-  });
+    }
+  );
 
-  it("should parse infix expressions correctly", () => {
-    let cases: [string, number, string, number][] = [
-      ["5 + 5;", 5, "+", 5],
-      ["5 - 5;", 5, "-", 5],
-      ["5 * 5;", 5, "*", 5],
-      ["5 / 5;", 5, "/", 5],
-      ["5 > 5;", 5, ">", 5],
-      ["5 < 5;", 5, "<", 5],
-      ["5 == 5;", 5, "==", 5],
-      ["5 != 5;", 5, "!=", 5],
-    ];
-
-    cases.forEach(([input, leftValue, operator, rightValue]) => {
+  it.each([
+    ["5 + 5;", 5, "+", 5],
+    ["5 - 5;", 5, "-", 5],
+    ["5 * 5;", 5, "*", 5],
+    ["5 / 5;", 5, "/", 5],
+    ["5 > 5;", 5, ">", 5],
+    ["5 < 5;", 5, "<", 5],
+    ["5 == 5;", 5, "==", 5],
+    ["5 != 5;", 5, "!=", 5],
+  ])(
+    "should parse (%s) as an infix expression",
+    (
+      input: string,
+      leftValue: number,
+      operator: string,
+      rightValue: number
+    ) => {
       checkInfixExpression(
         extractExpression(parseSingleStatement(input)),
         leftValue,
         operator,
         rightValue
       );
-    });
-  });
+    }
+  );
 
   it("should parse if expressions correctly", () => {
     const input = "if (x < y) { x }";
