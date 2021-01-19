@@ -63,3 +63,11 @@ export class ReturnValue extends MonkeyObject {
     return this.value.inspect();
   }
 }
+
+export class EvalError {
+  message: string;
+
+  constructor(message: string) {
+    this.message = message;
+  }
+}

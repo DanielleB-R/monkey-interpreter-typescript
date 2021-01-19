@@ -40,7 +40,7 @@ const monkeyEval = (node: ast.Node): o.MonkeyObject => {
     return evalConditionalExpression(node);
   }
 
-  throw "Unimplemented!";
+  throw new o.EvalError("Unimplemented!");
 };
 
 const evalProgram = (program: ast.Program): o.MonkeyObject => {
@@ -85,7 +85,7 @@ const UNARY_OPERATORS: Map<string, UnaryEvaluator> = new Map([
     "-",
     (operand: o.MonkeyObject): o.MonkeyObject => {
       if (!(operand instanceof o.MonkeyInteger)) {
-        return NULL;
+        throw new o.EvalError(`unknown operator: -${operand.objectType}`);
       }
       return new o.MonkeyInteger(-operand.value);
     },
@@ -98,7 +98,7 @@ const evalPrefixExpression = (
 ): o.MonkeyObject => {
   const evaluator = UNARY_OPERATORS.get(operator);
   if (!evaluator) {
-    return NULL;
+    throw new o.EvalError(`unknown operator: ${operator}${right.objectType}`);
   }
   return evaluator(right);
 };
@@ -116,7 +116,9 @@ const integerOperation = (f: BinaryNumericEvaluator) => (
   right: o.MonkeyObject
 ): o.MonkeyObject => {
   if (!(left instanceof o.MonkeyInteger && right instanceof o.MonkeyInteger)) {
-    return NULL;
+    throw new o.EvalError(
+      `invalid operation: ${left.objectType} + ${right.objectType}`
+    );
   }
   return new o.MonkeyInteger(f(left.value, right.value));
 };
@@ -130,7 +132,9 @@ const integerCompareOperation = (f: BinaryNumericComparator) => (
   right: o.MonkeyObject
 ): o.MonkeyObject => {
   if (!(left instanceof o.MonkeyInteger && right instanceof o.MonkeyInteger)) {
-    return NULL;
+    throw new o.EvalError(
+      `invalid operation: ${left.objectType} + ${right.objectType}`
+    );
   }
   return objectifyBoolean(f(left.value, right.value));
 };
@@ -170,10 +174,7 @@ const BINARY_OPERATORS: Map<string, BinaryEvaluator> = new Map([
       if (left instanceof o.MonkeyInteger && right instanceof o.MonkeyInteger) {
         return objectifyBoolean(left.value === right.value);
       }
-      if (left instanceof o.MonkeyBoolean && right instanceof o.MonkeyBoolean) {
-        return objectifyBoolean(left === right);
-      }
-      return NULL;
+      return objectifyBoolean(left === right);
     },
   ],
   [

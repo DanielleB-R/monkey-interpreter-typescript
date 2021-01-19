@@ -110,6 +110,25 @@ return 1; }`,
       10,
     ],
   ])("should evaluate return statements correctly in (%s)", integerTest);
+
+  it.each([
+    ["5 + true;", "invalid operation: INTEGER + BOOLEAN"],
+    ["5 + true; 5;", "invalid operation: INTEGER + BOOLEAN"],
+    ["-true", "unknown operator: -BOOLEAN"],
+    ["true + false;", "invalid operation: BOOLEAN + BOOLEAN"],
+    ["5; true + false; 5", "invalid operation: BOOLEAN + BOOLEAN"],
+    ["if (10 > 1) { true + false; }", "invalid operation: BOOLEAN + BOOLEAN"],
+  ])("should get the correct error from (%s)", (input, message) => {
+    let err: any;
+    try {
+      testEval(input);
+    } catch (e: any) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(o.EvalError);
+    const evalError = err as o.EvalError;
+    expect(evalError).toHaveProperty("message", message);
+  });
 });
 
 const testEval = (input: string): o.MonkeyObject => {
