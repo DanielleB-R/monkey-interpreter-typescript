@@ -49,6 +49,22 @@ const monkeyEval = (node: ast.Node, env: o.Environment): o.MonkeyObject => {
   if (node instanceof ast.FunctionLiteral) {
     return new o.MonkeyFunction(node.parameters, node.body, env);
   }
+  if (node instanceof ast.CallExpression) {
+    const fn = monkeyEval(node.fn, env);
+    if (!(fn instanceof o.MonkeyFunction)) {
+      throw new o.EvalError(
+        `calling non-callable value: type ${fn.objectType}`
+      );
+    }
+    const args = node.args.map((arg) => monkeyEval(arg, env));
+
+    const innerEnv = o.Environment.enclosing(fn.env);
+    args.forEach((arg, i) => innerEnv.setValue(fn.parameters[i].value, arg));
+
+    const result = monkeyEval(fn.body, innerEnv);
+
+    return result instanceof o.ReturnValue ? result.value : result;
+  }
 
   throw new o.EvalError("Unimplemented!");
 };

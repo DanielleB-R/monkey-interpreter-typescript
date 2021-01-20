@@ -100,9 +100,16 @@ export class EvalError {
 
 export class Environment {
   store: Map<string, MonkeyObject> = new Map();
+  outer?: Environment;
+
+  static enclosing(outer: Environment): Environment {
+    const env = new Environment();
+    env.outer = outer;
+    return env;
+  }
 
   getValue(name: string): MonkeyObject | undefined {
-    return this.store.get(name);
+    return this.store.get(name) ?? this.outer?.getValue(name);
   }
 
   setValue(name: string, value: MonkeyObject): MonkeyObject {

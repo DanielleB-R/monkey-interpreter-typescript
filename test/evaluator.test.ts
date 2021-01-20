@@ -150,6 +150,25 @@ return 1; }`,
 
     expect(fn.body.repr()).toBe("(x + 2)");
   });
+
+  it.each([
+    ["let identity = fn(x) { x; }; identity(5);", 5],
+    ["let identity = fn(x) { return x; }; identity(5);", 5],
+    ["let double = fn(x) { x * 2; }; double(5);", 10],
+    ["let add = fn(x, y) { x + y; }; add(5, 5);", 10],
+    ["let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20],
+    ["fn(x) { x; }(5)", 5],
+  ])("should evaluate function calls correctly in (%s)", integerTest);
+
+  it.each([
+    [
+      `let newAdder = fn(x) {
+     fn(y) { x + y };
+};
+let addTwo = newAdder(2); addTwo(2);`,
+      4,
+    ],
+  ])("should evaluate closures correctly (%s)", integerTest);
 });
 
 const testEval = (input: string): o.MonkeyObject => {
