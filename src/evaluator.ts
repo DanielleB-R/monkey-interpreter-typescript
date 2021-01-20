@@ -46,6 +46,9 @@ const monkeyEval = (node: ast.Node, env: o.Environment): o.MonkeyObject => {
   if (node instanceof ast.Identifier) {
     return evalIdentifier(node, env);
   }
+  if (node instanceof ast.FunctionLiteral) {
+    return new o.MonkeyFunction(node.parameters, node.body, env);
+  }
 
   throw new o.EvalError("Unimplemented!");
 };

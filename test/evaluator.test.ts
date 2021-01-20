@@ -136,6 +136,20 @@ return 1; }`,
     ["let a = 5; let b = a; b;", 5],
     ["let a = 5; let b = a; let c = a + b + 5; c;", 15],
   ])("should evaluate let statements correctly (%s)", integerTest);
+
+  it("should evaluate function literals correctly", () => {
+    const input = "fn(x) { x + 2; };";
+
+    const result = testEval(input);
+
+    expect(result).toBeInstanceOf(o.MonkeyFunction);
+    const fn = result as o.MonkeyFunction;
+
+    expect(fn.parameters).toHaveLength(1);
+    expect(fn.parameters[0]).toHaveProperty("value", "x");
+
+    expect(fn.body.repr()).toBe("(x + 2)");
+  });
 });
 
 const testEval = (input: string): o.MonkeyObject => {

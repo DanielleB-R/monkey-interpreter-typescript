@@ -1,8 +1,11 @@
+import * as ast from "./ast";
+
 export enum ObjectType {
   INTEGER = "INTEGER",
   BOOLEAN = "BOOLEAN",
   NULL = "NULL",
   RETURN = "RETURN",
+  FUNCTION = "FUNCTION",
 }
 
 export abstract class MonkeyObject {
@@ -61,6 +64,29 @@ export class ReturnValue extends MonkeyObject {
 
   inspect(): string {
     return this.value.inspect();
+  }
+}
+
+export class MonkeyFunction extends MonkeyObject {
+  parameters: ast.Identifier[];
+  body: ast.BlockStatement;
+  env: Environment;
+
+  constructor(
+    parameters: ast.Identifier[],
+    body: ast.BlockStatement,
+    env: Environment
+  ) {
+    super(ObjectType.FUNCTION);
+    this.parameters = parameters;
+    this.body = body;
+    this.env = env;
+  }
+
+  inspect(): string {
+    return `fn(${this.parameters
+      .map((param) => param.value)
+      .join(", ")}) {\n${this.body.repr()}\n}`;
   }
 }
 
