@@ -71,3 +71,16 @@ export class EvalError {
     this.message = message;
   }
 }
+
+export class Environment {
+  store: Map<string, MonkeyObject> = new Map();
+
+  getValue(name: string): MonkeyObject | undefined {
+    return this.store.get(name);
+  }
+
+  setValue(name: string, value: MonkeyObject): MonkeyObject {
+    this.store.set(name, value);
+    return value;
+  }
+}

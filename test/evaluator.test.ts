@@ -129,6 +129,13 @@ return 1; }`,
     const evalError = err as o.EvalError;
     expect(evalError).toHaveProperty("message", message);
   });
+
+  it.each([
+    ["let a = 5; a;", 5],
+    ["let a = 5 * 5; a;", 25],
+    ["let a = 5; let b = a; b;", 5],
+    ["let a = 5; let b = a; let c = a + b + 5; c;", 15],
+  ])("should evaluate let statements correctly (%s)", integerTest);
 });
 
 const testEval = (input: string): o.MonkeyObject => {
@@ -137,7 +144,7 @@ const testEval = (input: string): o.MonkeyObject => {
 
   expect(parser.errors).toHaveLength(0);
 
-  return monkeyEval(program);
+  return monkeyEval(program, new o.Environment());
 };
 
 const checkIntegerObject = (result: o.MonkeyObject, n: number) => {

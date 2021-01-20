@@ -2,6 +2,7 @@ import * as readline from "readline";
 import Lexer from "./lexer";
 import Parser from "./parser";
 import monkeyEval from "./evaluator";
+import { Environment } from "./object";
 
 const PROMPT = ">> ";
 
@@ -14,6 +15,9 @@ const startRepl = async () => {
     input: process.stdin,
     output: process.stdout,
   });
+
+  const env = new Environment();
+
   while (true) {
     const input = await ask(rl, PROMPT);
 
@@ -26,7 +30,7 @@ const startRepl = async () => {
       continue;
     }
 
-    console.log(monkeyEval(program).inspect());
+    console.log(monkeyEval(program, env).inspect());
   }
 };
 

@@ -7,19 +7,23 @@ const FALSE = new o.MonkeyBoolean(false);
 
 const objectifyBoolean = (b: boolean): o.MonkeyBoolean => (b ? TRUE : FALSE);
 
-const monkeyEval = (node: ast.Node): o.MonkeyObject => {
+const monkeyEval = (node: ast.Node, env: o.Environment): o.MonkeyObject => {
   if (node instanceof ast.Program) {
-    return evalProgram(node);
+    return evalProgram(node, env);
   }
   if (node instanceof ast.ExpressionStatement) {
-    return monkeyEval(node.expression);
+    return monkeyEval(node.expression, env);
   }
   if (node instanceof ast.BlockStatement) {
-    return evalBlock(node);
+    return evalBlock(node, env);
   }
   if (node instanceof ast.ReturnStatement) {
-    const returnValue = monkeyEval(node.returnValue);
+    const returnValue = monkeyEval(node.returnValue, env);
     return new o.ReturnValue(returnValue);
+  }
+  if (node instanceof ast.LetStatement) {
+    const value = monkeyEval(node.value, env);
+    return env.setValue(node.name.value, value);
   }
   if (node instanceof ast.IntegerLiteral) {
     return new o.MonkeyInteger(node.value);
@@ -28,25 +32,31 @@ const monkeyEval = (node: ast.Node): o.MonkeyObject => {
     return objectifyBoolean(node.value);
   }
   if (node instanceof ast.PrefixExpression) {
-    const right = monkeyEval(node.right);
+    const right = monkeyEval(node.right, env);
     return evalPrefixExpression(node.operator, right);
   }
   if (node instanceof ast.InfixExpression) {
-    const left = monkeyEval(node.left);
-    const right = monkeyEval(node.right);
+    const left = monkeyEval(node.left, env);
+    const right = monkeyEval(node.right, env);
     return evalInfixExpression(left, node.operator, right);
   }
   if (node instanceof ast.IfExpression) {
-    return evalConditionalExpression(node);
+    return evalConditionalExpression(node, env);
+  }
+  if (node instanceof ast.Identifier) {
+    return evalIdentifier(node, env);
   }
 
   throw new o.EvalError("Unimplemented!");
 };
 
-const evalProgram = (program: ast.Program): o.MonkeyObject => {
+const evalProgram = (
+  program: ast.Program,
+  env: o.Environment
+): o.MonkeyObject => {
   let result: o.MonkeyObject = NULL;
   for (const stmt of program.statements) {
-    result = monkeyEval(stmt);
+    result = monkeyEval(stmt, env);
 
     if (result instanceof o.ReturnValue) {
       return result.value;
@@ -55,10 +65,13 @@ const evalProgram = (program: ast.Program): o.MonkeyObject => {
   return result;
 };
 
-const evalBlock = (block: ast.BlockStatement): o.MonkeyObject => {
+const evalBlock = (
+  block: ast.BlockStatement,
+  env: o.Environment
+): o.MonkeyObject => {
   let result: o.MonkeyObject = NULL;
   for (const stmt of block.statements) {
-    result = monkeyEval(stmt);
+    result = monkeyEval(stmt, env);
 
     if (result instanceof o.ReturnValue) {
       return result;
@@ -200,18 +213,32 @@ const evalInfixExpression = (
   return evaluator(left, right);
 };
 
-const evalConditionalExpression = (expr: ast.IfExpression): o.MonkeyObject => {
-  const condition = monkeyEval(expr.condition);
+const evalConditionalExpression = (
+  expr: ast.IfExpression,
+  env: o.Environment
+): o.MonkeyObject => {
+  const condition = monkeyEval(expr.condition, env);
 
   if (isTruthy(condition)) {
-    return monkeyEval(expr.consequence);
+    return monkeyEval(expr.consequence, env);
   } else {
     if (expr.alternative) {
-      return monkeyEval(expr.alternative);
+      return monkeyEval(expr.alternative, env);
     } else {
       return NULL;
     }
   }
+};
+
+const evalIdentifier = (
+  ident: ast.Identifier,
+  env: o.Environment
+): o.MonkeyObject => {
+  const value = env.getValue(ident.value);
+  if (!value) {
+    throw new o.EvalError(`undefined name ${ident.value}`);
+  }
+  return value;
 };
 
 const isTruthy = (obj: o.MonkeyObject): boolean =>
