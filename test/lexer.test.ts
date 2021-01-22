@@ -3,7 +3,7 @@ import Lexer from "../src/lexer";
 
 describe("Lexer", () => {
   describe("nextToken", () => {
-    it("should parse all of the single char token types", () => {
+    it("should tokenize all of the single char token types", () => {
       const input = "=+(){},;";
 
       const lexer = new Lexer(input);
@@ -23,7 +23,7 @@ describe("Lexer", () => {
       });
     });
 
-    it("should parse some realistic-looking code", () => {
+    it("should tokenize some realistic-looking code", () => {
       const input = `let five = 5;
 let ten = 10;
    let add = fn(x, y) {
@@ -40,7 +40,9 @@ if (5 < 10) {
 }
 
 10 == 10;
-10 != 9;`;
+10 != 9;
+"foobar"
+"foo bar"`;
 
       const lexer = new Lexer(input);
 
@@ -118,6 +120,8 @@ if (5 < 10) {
         [TokenType.NOT_EQ, "!="],
         [TokenType.INT, "9"],
         [TokenType.SEMICOLON, ";"],
+        [TokenType.STRING, "foobar"],
+        [TokenType.STRING, "foo bar"],
         [TokenType.EOF, ""],
       ].forEach(([tokenType, literal]) => {
         expect(lexer.nextToken()).toEqual({ tokenType, literal });

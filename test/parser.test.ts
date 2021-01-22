@@ -194,6 +194,16 @@ return x;`;
     checkInfixExpression(call.args[2], 4, "+", 5);
   });
 
+  it("should parse string literals correctly", () => {
+    const input = `"hello world";`;
+    const expr = extractExpression(parseSingleStatement(input));
+
+    expect(expr).toHaveProperty("nodeType", ast.NodeType.STR);
+    const str = expr as ast.StringLiteral;
+
+    expect(str.value).toBe("hello world");
+  });
+
   it("should resolve precedence correctly", () => {
     [
       ["-a * b", "((-a) * b)"],

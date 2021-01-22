@@ -56,6 +56,7 @@ export default class Parser {
     this.prefixParseFns.set(TokenType.LPAREN, this.parseGroupedExpression);
     this.prefixParseFns.set(TokenType.IF, this.parseIfExpression);
     this.prefixParseFns.set(TokenType.FUNCTION, this.parseFunctionLiteral);
+    this.prefixParseFns.set(TokenType.STRING, this.parseStringLiteral);
 
     this.infixParseFns.set(TokenType.PLUS, this.parseInfixExpression);
     this.infixParseFns.set(TokenType.MINUS, this.parseInfixExpression);
@@ -405,5 +406,13 @@ export default class Parser {
     }
 
     return args;
+  };
+
+  parseStringLiteral = (): ast.StringLiteral => {
+    return {
+      nodeType: ast.NodeType.STR,
+      token: this.curToken,
+      value: this.curToken.literal,
+    };
   };
 }

@@ -21,6 +21,16 @@ const read_bang = (literal: string, lexer: Lexer): Token => {
   return makeToken(TokenType.BANG, literal);
 };
 
+const read_string = (_: string, lexer: Lexer): Token => {
+  const position = lexer.position;
+  lexer.advanceWhileTrue((c) => c !== '"' && c !== "\0");
+  lexer.readChar();
+  return makeToken(
+    TokenType.STRING,
+    lexer.input.substring(position, lexer.position - 1)
+  );
+};
+
 interface TokenReader {
   (literal: string, lexer: Lexer): Token;
 }
@@ -51,6 +61,7 @@ const TOKEN_READERS: TokenReaderMap = {
   if: input_token(TokenType.IF),
   else: input_token(TokenType.ELSE),
   return: input_token(TokenType.RETURN),
+  '"': read_string,
   "\0": (_: string): Token => makeToken(TokenType.EOF, ""),
 };
 

@@ -119,6 +119,7 @@ return 1; }`,
     ["true + false;", "invalid operation: BOOLEAN + BOOLEAN"],
     ["5; true + false; 5", "invalid operation: BOOLEAN + BOOLEAN"],
     ["if (10 > 1) { true + false; }", "invalid operation: BOOLEAN + BOOLEAN"],
+    [`"Hello" - "World"`, "invalid operation: STRING - STRING"],
   ])("should get the correct error from (%s)", (input, message) => {
     let err: any;
     try {
@@ -170,6 +171,26 @@ let addTwo = newAdder(2); addTwo(2);`,
       4,
     ],
   ])("should evaluate closures correctly (%s)", integerTest);
+
+  it("should evaluate string literals correctly", () => {
+    const input = `"Hello World!"`;
+
+    const result = testEval(input);
+    expect(result).toBeInstanceOf(o.MonkeyString);
+    const str = result as o.MonkeyString;
+
+    expect(str.value).toBe("Hello World!");
+  });
+
+  it("should evaluate string concatenation correctly", () => {
+    const input = `"Hello" + " " + "World!"`;
+
+    const result = testEval(input);
+    expect(result).toBeInstanceOf(o.MonkeyString);
+    const str = result as o.MonkeyString;
+
+    expect(str.value).toBe("Hello World!");
+  });
 });
 
 const testEval = (input: string): o.MonkeyObject => {

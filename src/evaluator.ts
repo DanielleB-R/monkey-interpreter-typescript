@@ -40,6 +40,8 @@ const monkeyEval = (node: ast.Node, env: o.Environment): o.MonkeyObject => {
       return new o.MonkeyFunction(node.parameters, node.body, env);
     case ast.NodeType.CALL:
       return evalCallExpression(node, env);
+    case ast.NodeType.STR:
+      return new o.MonkeyString(node.value);
   }
 };
 
@@ -117,13 +119,13 @@ interface BinaryNumericEvaluator {
   (left: number, right: number): number;
 }
 
-const integerOperation = (f: BinaryNumericEvaluator) => (
+const integerOperation = (operator: string, f: BinaryNumericEvaluator) => (
   left: o.MonkeyObject,
   right: o.MonkeyObject
 ): o.MonkeyObject => {
   if (!(left instanceof o.MonkeyInteger && right instanceof o.MonkeyInteger)) {
     throw new o.EvalError(
-      `invalid operation: ${left.objectType} + ${right.objectType}`
+      `invalid operation: ${left.objectType} ${operator} ${right.objectType}`
     );
   }
   return new o.MonkeyInteger(f(left.value, right.value));
@@ -145,22 +147,41 @@ const integerCompareOperation = (f: BinaryNumericComparator) => (
   return objectifyBoolean(f(left.value, right.value));
 };
 
+const add_numbers = integerOperation(
+  "+",
+  (left: number, right: number): number => left + right
+);
+
 const BINARY_OPERATORS: Map<string, BinaryEvaluator> = new Map([
   [
     "+",
-    integerOperation((left: number, right: number): number => left + right),
+    (left: o.MonkeyObject, right: o.MonkeyObject): o.MonkeyObject => {
+      if (left instanceof o.MonkeyString && right instanceof o.MonkeyString) {
+        return new o.MonkeyString(left.value + right.value);
+      }
+      return add_numbers(left, right);
+    },
   ],
   [
     "-",
-    integerOperation((left: number, right: number): number => left - right),
+    integerOperation(
+      "-",
+      (left: number, right: number): number => left - right
+    ),
   ],
   [
     "*",
-    integerOperation((left: number, right: number): number => left * right),
+    integerOperation(
+      "*",
+      (left: number, right: number): number => left * right
+    ),
   ],
   [
     "/",
-    integerOperation((left: number, right: number): number => left / right),
+    integerOperation(
+      "/",
+      (left: number, right: number): number => left / right
+    ),
   ],
   [
     "<",

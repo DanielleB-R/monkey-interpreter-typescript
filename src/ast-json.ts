@@ -14,6 +14,7 @@ export enum NodeType {
   IF = "if",
   FN = "function",
   CALL = "call",
+  STR = "string",
 }
 
 export interface NodeBase {
@@ -116,6 +117,11 @@ export interface CallExpression extends NodeBase {
   args: Expression[];
 }
 
+export interface StringLiteral extends NodeBase {
+  nodeType: NodeType.STR;
+  value: string;
+}
+
 export type Expression =
   | Identifier
   | IntegerLiteral
@@ -124,7 +130,8 @@ export type Expression =
   | InfixExpression
   | IfExpression
   | FunctionLiteral
-  | CallExpression;
+  | CallExpression
+  | StringLiteral;
 
 export type Node = Program | Statement | Expression;
 
@@ -164,5 +171,7 @@ export function repr(node: Node): string {
       return `fn(${node.parameters.map(repr).join(", ")}) ${repr(node.body)}`;
     case NodeType.CALL:
       return `${repr(node.fn)}(${node.args.map(repr).join(", ")})`;
+    case NodeType.STR:
+      return node.value;
   }
 }

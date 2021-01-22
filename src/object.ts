@@ -6,6 +6,7 @@ export enum ObjectType {
   NULL = "NULL",
   RETURN = "RETURN",
   FUNCTION = "FUNCTION",
+  STRING = "STRING",
 }
 
 export abstract class MonkeyObject {
@@ -41,6 +42,19 @@ export class MonkeyBoolean extends MonkeyObject {
 
   inspect(): string {
     return `${this.value}`;
+  }
+}
+
+export class MonkeyString extends MonkeyObject {
+  value: string;
+
+  constructor(value: string) {
+    super(ObjectType.STRING);
+    this.value = value;
+  }
+
+  inspect(): string {
+    return this.value;
   }
 }
 
