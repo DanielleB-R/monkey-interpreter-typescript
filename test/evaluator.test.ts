@@ -144,7 +144,7 @@ return 1; }`,
 
     const result = testEval(input);
 
-    expect(result).toBeInstanceOf(o.MonkeyFunction);
+    expect(result).toHaveProperty("objectType", o.ObjectType.FUNCTION);
     const fn = result as o.MonkeyFunction;
 
     expect(fn.parameters).toHaveLength(1);
@@ -176,7 +176,7 @@ let addTwo = newAdder(2); addTwo(2);`,
     const input = `"Hello World!"`;
 
     const result = testEval(input);
-    expect(result).toBeInstanceOf(o.MonkeyString);
+    expect(result).toHaveProperty("objectType", o.ObjectType.STRING);
     const str = result as o.MonkeyString;
 
     expect(str.value).toBe("Hello World!");
@@ -186,7 +186,7 @@ let addTwo = newAdder(2); addTwo(2);`,
     const input = `"Hello" + " " + "World!"`;
 
     const result = testEval(input);
-    expect(result).toBeInstanceOf(o.MonkeyString);
+    expect(result).toHaveProperty("objectType", o.ObjectType.STRING);
     const str = result as o.MonkeyString;
 
     expect(str.value).toBe("Hello World!");
@@ -196,7 +196,7 @@ let addTwo = newAdder(2); addTwo(2);`,
     const input = "[1, 2*2, 3+3]";
     const result = testEval(input);
 
-    expect(result).toBeInstanceOf(o.MonkeyArray);
+    expect(result).toHaveProperty("objectType", o.ObjectType.ARRAY);
     const arr = result as o.MonkeyArray;
 
     expect(arr.elements).toHaveLength(3);
@@ -225,7 +225,7 @@ let addTwo = newAdder(2); addTwo(2);`,
         return;
       }
       const result = testEval(input);
-      expect(result).toBeInstanceOf(o.MonkeyNull);
+      checkNullObject(result);
     }
   );
 
@@ -254,12 +254,12 @@ let addTwo = newAdder(2); addTwo(2);`,
     }
     if (output === null) {
       const result = testEval(input);
-      expect(result).toBeInstanceOf(o.MonkeyNull);
+      checkNullObject(result);
       return;
     }
     if (Array.isArray(output)) {
       const result = testEval(input);
-      expect(result).toBeInstanceOf(o.MonkeyArray);
+      expect(result).toHaveProperty("objectType", o.ObjectType.ARRAY);
       const arr = result as o.MonkeyArray;
 
       arr.elements.forEach((actual, i) =>
@@ -294,7 +294,7 @@ map(a, double);`;
 
     const output = [2, 4, 6, 8];
     const result = testEval(input);
-    expect(result).toBeInstanceOf(o.MonkeyArray);
+    expect(result).toHaveProperty("objectType", o.ObjectType.ARRAY);
     const arr = result as o.MonkeyArray;
 
     arr.elements.forEach((actual, i) => checkIntegerObject(actual, output[i]));
@@ -328,19 +328,19 @@ const testEval = (input: string): o.MonkeyObject => {
 };
 
 const checkIntegerObject = (result: o.MonkeyObject, n: number) => {
-  expect(result).toBeInstanceOf(o.MonkeyInteger);
+  expect(result).toHaveProperty("objectType", o.ObjectType.INTEGER);
   const integer = result as o.MonkeyInteger;
 
   expect(integer.value).toBe(n);
 };
 
 const checkBooleanObject = (result: o.MonkeyObject, b: boolean) => {
-  expect(result).toBeInstanceOf(o.MonkeyBoolean);
+  expect(result).toHaveProperty("objectType", o.ObjectType.BOOLEAN);
   const boolObj = result as o.MonkeyBoolean;
 
   expect(boolObj.value).toBe(b);
 };
 
 const checkNullObject = (result: o.MonkeyObject) => {
-  expect(result).toBeInstanceOf(o.MonkeyNull);
+  expect(result).toBe(o.NULL);
 };

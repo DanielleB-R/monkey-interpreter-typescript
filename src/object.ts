@@ -15,126 +15,97 @@ export enum ObjectType {
   ARRAY = "ARRAY",
 }
 
-export abstract class MonkeyObject {
+export interface ObjectBase {
   objectType: ObjectType;
-
-  constructor(objectType: ObjectType) {
-    this.objectType = objectType;
-  }
-
-  abstract inspect(): string;
 }
 
-export class MonkeyInteger extends MonkeyObject {
+export interface MonkeyInteger extends ObjectBase {
+  objectType: ObjectType.INTEGER;
   value: number;
-
-  constructor(value: number = 0) {
-    super(ObjectType.INTEGER);
-    this.value = value;
-  }
-
-  inspect(): string {
-    return `${this.value}`;
-  }
 }
 
-export class MonkeyBoolean extends MonkeyObject {
+export function wrapInteger(value: number): MonkeyInteger {
+  return {
+    objectType: ObjectType.INTEGER,
+    value,
+  };
+}
+
+export function isInteger(value: MonkeyObject): value is MonkeyInteger {
+  return value.objectType === ObjectType.INTEGER;
+}
+
+export interface MonkeyBoolean extends ObjectBase {
+  objectType: ObjectType.BOOLEAN;
   value: boolean;
-
-  constructor(value: boolean = false) {
-    super(ObjectType.BOOLEAN);
-    this.value = value;
-  }
-
-  inspect(): string {
-    return `${this.value}`;
-  }
 }
 
-export class MonkeyString extends MonkeyObject {
+export interface MonkeyString extends ObjectBase {
+  objectType: ObjectType.STRING;
   value: string;
-
-  constructor(value: string) {
-    super(ObjectType.STRING);
-    this.value = value;
-  }
-
-  inspect(): string {
-    return this.value;
-  }
 }
 
-export class MonkeyArray extends MonkeyObject {
+export function isString(value: MonkeyObject): value is MonkeyString {
+  return value.objectType === ObjectType.STRING;
+}
+
+export interface MonkeyArray extends ObjectBase {
+  objectType: ObjectType.ARRAY;
   elements: MonkeyObject[];
-
-  constructor(elements: MonkeyObject[]) {
-    super(ObjectType.ARRAY);
-    this.elements = elements;
-  }
-
-  inspect(): string {
-    return `[${this.elements.map((obj) => obj.inspect()).join(", ")}]`;
-  }
 }
 
-export class MonkeyNull extends MonkeyObject {
-  constructor() {
-    super(ObjectType.NULL);
-  }
-
-  inspect(): string {
-    return "null";
-  }
+export function wrapArray(elements: MonkeyObject[]): MonkeyArray {
+  return {
+    objectType: ObjectType.ARRAY,
+    elements,
+  };
 }
 
-export class ReturnValue extends MonkeyObject {
+export function isArray(value: MonkeyObject): value is MonkeyArray {
+  return value.objectType === ObjectType.ARRAY;
+}
+
+export interface MonkeyNull extends ObjectBase {
+  objectType: ObjectType.NULL;
+}
+
+export interface ReturnValue extends ObjectBase {
+  objectType: ObjectType.RETURN;
   value: MonkeyObject;
-
-  constructor(value: MonkeyObject) {
-    super(ObjectType.RETURN);
-    this.value = value;
-  }
-
-  inspect(): string {
-    return this.value.inspect();
-  }
 }
 
-export class MonkeyFunction extends MonkeyObject {
+export function wrapReturn(value: MonkeyObject): ReturnValue {
+  return {
+    objectType: ObjectType.RETURN,
+    value,
+  };
+}
+
+export function unwrapReturn(value: MonkeyObject): MonkeyObject {
+  return value.objectType === ObjectType.RETURN ? value.value : value;
+}
+
+export interface MonkeyFunction extends ObjectBase {
+  objectType: ObjectType.FUNCTION;
   parameters: ast.Identifier[];
   body: ast.BlockStatement;
   env: Environment;
-
-  constructor(
-    parameters: ast.Identifier[],
-    body: ast.BlockStatement,
-    env: Environment
-  ) {
-    super(ObjectType.FUNCTION);
-    this.parameters = parameters;
-    this.body = body;
-    this.env = env;
-  }
-
-  inspect(): string {
-    return `fn(${this.parameters
-      .map((param) => param.value)
-      .join(", ")}) {\n${ast.repr(this.body)}\n}`;
-  }
 }
 
-export class Builtin extends MonkeyObject {
+export interface Builtin extends ObjectBase {
+  objectType: ObjectType.BUILTIN;
   fn: BuiltinFunction;
-
-  constructor(fn: BuiltinFunction) {
-    super(ObjectType.BUILTIN);
-    this.fn = fn;
-  }
-
-  inspect(): string {
-    return "builtin function";
-  }
 }
+
+export type MonkeyObject =
+  | MonkeyInteger
+  | MonkeyBoolean
+  | MonkeyString
+  | MonkeyArray
+  | MonkeyNull
+  | ReturnValue
+  | MonkeyFunction
+  | Builtin;
 
 export class EvalError {
   message: string;
@@ -164,6 +135,34 @@ export class Environment {
   }
 }
 
-export const NULL = new MonkeyNull();
-export const TRUE = new MonkeyBoolean(true);
-export const FALSE = new MonkeyBoolean(false);
+export const NULL: MonkeyNull = { objectType: ObjectType.NULL };
+export const TRUE: MonkeyBoolean = {
+  objectType: ObjectType.BOOLEAN,
+  value: true,
+};
+export const FALSE: MonkeyBoolean = {
+  objectType: ObjectType.BOOLEAN,
+  value: false,
+};
+
+export function inspect(obj: MonkeyObject): string {
+  switch (obj.objectType) {
+    case ObjectType.INTEGER:
+    case ObjectType.BOOLEAN:
+      return `${obj.value}`;
+    case ObjectType.STRING:
+      return obj.value;
+    case ObjectType.ARRAY:
+      return `[${obj.elements.map(inspect).join(", ")}]`;
+    case ObjectType.NULL:
+      return "null";
+    case ObjectType.RETURN:
+      return inspect(obj.value);
+    case ObjectType.FUNCTION:
+      return `fn(${obj.parameters
+        .map((param) => param.value)
+        .join(", ")}) {\n${ast.repr(obj.body)}\n}`;
+    case ObjectType.BUILTIN:
+      return "builtin function";
+  }
+}

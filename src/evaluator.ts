@@ -15,12 +15,12 @@ const monkeyEval = (node: ast.Node, env: o.Environment): o.MonkeyObject => {
       return evalBlock(node, env);
     case ast.NodeType.RETURN:
       const returnValue = monkeyEval(node.returnValue, env);
-      return new o.ReturnValue(returnValue);
+      return o.wrapReturn(returnValue);
     case ast.NodeType.LET:
       const value = monkeyEval(node.value, env);
       return env.setValue(node.name.value, value);
     case ast.NodeType.INT:
-      return new o.MonkeyInteger(node.value);
+      return o.wrapInteger(node.value);
     case ast.NodeType.BOOL:
       return objectifyBoolean(node.value);
     case ast.NodeType.PREFIX:
@@ -35,15 +35,18 @@ const monkeyEval = (node: ast.Node, env: o.Environment): o.MonkeyObject => {
     case ast.NodeType.IDENTIFIER:
       return evalIdentifier(node, env);
     case ast.NodeType.FN:
-      return new o.MonkeyFunction(node.parameters, node.body, env);
+      return {
+        objectType: o.ObjectType.FUNCTION,
+        parameters: node.parameters,
+        body: node.body,
+        env,
+      };
     case ast.NodeType.CALL:
       return evalCallExpression(node, env);
     case ast.NodeType.STR:
-      return new o.MonkeyString(node.value);
+      return { objectType: o.ObjectType.STRING, value: node.value };
     case ast.NodeType.ARRAY:
-      return new o.MonkeyArray(
-        node.elements.map((expr) => monkeyEval(expr, env))
-      );
+      return o.wrapArray(node.elements.map((expr) => monkeyEval(expr, env)));
     case ast.NodeType.INDEX:
       return evalIndexExpression(node, env);
   }
@@ -57,7 +60,7 @@ const evalProgram = (
   for (const stmt of program.statements) {
     result = monkeyEval(stmt, env);
 
-    if (result instanceof o.ReturnValue) {
+    if (result.objectType === o.ObjectType.RETURN) {
       return result.value;
     }
   }
@@ -72,7 +75,7 @@ const evalBlock = (
   for (const stmt of block.statements) {
     result = monkeyEval(stmt, env);
 
-    if (result instanceof o.ReturnValue) {
+    if (result.objectType === o.ObjectType.RETURN) {
       return result;
     }
   }
@@ -96,10 +99,10 @@ const UNARY_OPERATORS: Map<string, UnaryEvaluator> = new Map([
   [
     "-",
     (operand: o.MonkeyObject): o.MonkeyObject => {
-      if (!(operand instanceof o.MonkeyInteger)) {
+      if (!o.isInteger(operand)) {
         throw new o.EvalError(`unknown operator: -${operand.objectType}`);
       }
-      return new o.MonkeyInteger(-operand.value);
+      return o.wrapInteger(-operand.value);
     },
   ],
 ]);
@@ -127,12 +130,12 @@ const integerOperation = (operator: string, f: BinaryNumericEvaluator) => (
   left: o.MonkeyObject,
   right: o.MonkeyObject
 ): o.MonkeyObject => {
-  if (!(left instanceof o.MonkeyInteger && right instanceof o.MonkeyInteger)) {
+  if (!(o.isInteger(left) && o.isInteger(right))) {
     throw new o.EvalError(
       `invalid operation: ${left.objectType} ${operator} ${right.objectType}`
     );
   }
-  return new o.MonkeyInteger(f(left.value, right.value));
+  return o.wrapInteger(f(left.value, right.value));
 };
 
 interface BinaryNumericComparator {
@@ -143,7 +146,7 @@ const integerCompareOperation = (f: BinaryNumericComparator) => (
   left: o.MonkeyObject,
   right: o.MonkeyObject
 ): o.MonkeyObject => {
-  if (!(left instanceof o.MonkeyInteger && right instanceof o.MonkeyInteger)) {
+  if (!(o.isInteger(left) && o.isInteger(right))) {
     throw new o.EvalError(
       `invalid operation: ${left.objectType} + ${right.objectType}`
     );
@@ -160,8 +163,11 @@ const BINARY_OPERATORS: Map<string, BinaryEvaluator> = new Map([
   [
     "+",
     (left: o.MonkeyObject, right: o.MonkeyObject): o.MonkeyObject => {
-      if (left instanceof o.MonkeyString && right instanceof o.MonkeyString) {
-        return new o.MonkeyString(left.value + right.value);
+      if (o.isString(left) && o.isString(right)) {
+        return {
+          objectType: o.ObjectType.STRING,
+          value: left.value + right.value,
+        };
       }
       return add_numbers(left, right);
     },
@@ -200,9 +206,10 @@ const BINARY_OPERATORS: Map<string, BinaryEvaluator> = new Map([
     ),
   ],
   [
+    // TODO: we don't have string comparison or array comparison
     "==",
     (left: o.MonkeyObject, right: o.MonkeyObject): o.MonkeyObject => {
-      if (left instanceof o.MonkeyInteger && right instanceof o.MonkeyInteger) {
+      if (o.isInteger(left) && o.isInteger(right)) {
         return objectifyBoolean(left.value === right.value);
       }
       return objectifyBoolean(left === right);
@@ -211,7 +218,7 @@ const BINARY_OPERATORS: Map<string, BinaryEvaluator> = new Map([
   [
     "!=",
     (left: o.MonkeyObject, right: o.MonkeyObject): o.MonkeyObject => {
-      if (left instanceof o.MonkeyInteger && right instanceof o.MonkeyInteger) {
+      if (o.isInteger(left) && o.isInteger(right)) {
         return objectifyBoolean(left.value !== right.value);
       }
       return objectifyBoolean(left !== right);
@@ -269,13 +276,16 @@ const evalCallExpression = (
   env: o.Environment
 ): o.MonkeyObject => {
   const fn = monkeyEval(call.fn, env);
-  if (fn instanceof o.MonkeyFunction) {
-    return evalMonkeyCall(call, fn, env);
+  switch (fn.objectType) {
+    case o.ObjectType.FUNCTION:
+      return evalMonkeyCall(call, fn, env);
+    case o.ObjectType.BUILTIN:
+      return evalBuiltinCall(call, fn, env);
+    default:
+      throw new o.EvalError(
+        `calling non-callable value: type ${fn.objectType}`
+      );
   }
-  if (fn instanceof o.Builtin) {
-    return evalBuiltinCall(call, fn, env);
-  }
-  throw new o.EvalError(`calling non-callable value: type ${fn.objectType}`);
 };
 
 const evalMonkeyCall = (
@@ -290,7 +300,7 @@ const evalMonkeyCall = (
 
   const result = monkeyEval(fn.body, innerEnv);
 
-  return result instanceof o.ReturnValue ? result.value : result;
+  return o.unwrapReturn(result);
 };
 
 const evalBuiltinCall = (
@@ -308,11 +318,11 @@ const evalIndexExpression = (
   env: o.Environment
 ): o.MonkeyObject => {
   const arr = monkeyEval(expr.left, env);
-  if (!(arr instanceof o.MonkeyArray)) {
+  if (!o.isArray(arr)) {
     throw new o.EvalError("indexed non-indexable type ${arr.objectType}");
   }
   const index = monkeyEval(expr.index, env);
-  if (!(index instanceof o.MonkeyInteger)) {
+  if (!o.isInteger(index)) {
     throw new o.EvalError(
       "indexing array with non-integer type ${index.objectType}"
     );
