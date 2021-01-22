@@ -1,9 +1,7 @@
 import * as ast from "./ast-json";
 import * as o from "./object";
-
-const NULL = new o.MonkeyNull();
-const TRUE = new o.MonkeyBoolean(true);
-const FALSE = new o.MonkeyBoolean(false);
+import { NULL, TRUE, FALSE } from "./object";
+import BUILTINS from "./builtins";
 
 const objectifyBoolean = (b: boolean): o.MonkeyBoolean => (b ? TRUE : FALSE);
 
@@ -248,7 +246,12 @@ const evalIdentifier = (
   ident: ast.Identifier,
   env: o.Environment
 ): o.MonkeyObject => {
-  const value = env.getValue(ident.value);
+  let value = env.getValue(ident.value);
+
+  if (!value) {
+    value = BUILTINS.get(ident.value);
+  }
+
   if (!value) {
     throw new o.EvalError(`undefined name ${ident.value}`);
   }
@@ -260,9 +263,20 @@ const evalCallExpression = (
   env: o.Environment
 ): o.MonkeyObject => {
   const fn = monkeyEval(call.fn, env);
-  if (!(fn instanceof o.MonkeyFunction)) {
-    throw new o.EvalError(`calling non-callable value: type ${fn.objectType}`);
+  if (fn instanceof o.MonkeyFunction) {
+    return evalMonkeyCall(call, fn, env);
   }
+  if (fn instanceof o.Builtin) {
+    return evalBuiltinCall(call, fn, env);
+  }
+  throw new o.EvalError(`calling non-callable value: type ${fn.objectType}`);
+};
+
+const evalMonkeyCall = (
+  call: ast.CallExpression,
+  fn: o.MonkeyFunction,
+  env: o.Environment
+): o.MonkeyObject => {
   const args = call.args.map((arg) => monkeyEval(arg, env));
 
   const innerEnv = o.Environment.enclosing(fn.env);
@@ -271,6 +285,16 @@ const evalCallExpression = (
   const result = monkeyEval(fn.body, innerEnv);
 
   return result instanceof o.ReturnValue ? result.value : result;
+};
+
+const evalBuiltinCall = (
+  call: ast.CallExpression,
+  fn: o.Builtin,
+  env: o.Environment
+): o.MonkeyObject => {
+  const args = call.args.map((arg) => monkeyEval(arg, env));
+
+  return fn.fn(...args);
 };
 
 const isTruthy = (obj: o.MonkeyObject): boolean =>

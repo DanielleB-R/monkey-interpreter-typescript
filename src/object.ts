@@ -1,5 +1,9 @@
 import * as ast from "./ast-json";
 
+export interface BuiltinFunction {
+  (...args: MonkeyObject[]): MonkeyObject;
+}
+
 export enum ObjectType {
   INTEGER = "INTEGER",
   BOOLEAN = "BOOLEAN",
@@ -7,6 +11,7 @@ export enum ObjectType {
   RETURN = "RETURN",
   FUNCTION = "FUNCTION",
   STRING = "STRING",
+  BUILTIN = "BUILTIN",
 }
 
 export abstract class MonkeyObject {
@@ -104,6 +109,19 @@ export class MonkeyFunction extends MonkeyObject {
   }
 }
 
+export class Builtin extends MonkeyObject {
+  fn: BuiltinFunction;
+
+  constructor(fn: BuiltinFunction) {
+    super(ObjectType.BUILTIN);
+    this.fn = fn;
+  }
+
+  inspect(): string {
+    return "builtin function";
+  }
+}
+
 export class EvalError {
   message: string;
 
@@ -131,3 +149,7 @@ export class Environment {
     return value;
   }
 }
+
+export const NULL = new MonkeyNull();
+export const TRUE = new MonkeyBoolean(true);
+export const FALSE = new MonkeyBoolean(false);

@@ -191,6 +191,29 @@ let addTwo = newAdder(2); addTwo(2);`,
 
     expect(str.value).toBe("Hello World!");
   });
+
+  it.each([
+    [`len("")`, 0],
+    [`len("four")`, 4],
+    [`len("hello world")`, 11],
+    [`len(1)`, "argument to len() not supported, got INTEGER"],
+    [`len("one", "two")`, "len() takes one arg, got 2"],
+  ])("should evaluate builtin expressions correctly (%s)", (input, output) => {
+    if (typeof output === "number") {
+      integerTest(input, output);
+      return;
+    }
+    let err;
+    try {
+      testEval(input);
+    } catch (e) {
+      err = e;
+    }
+
+    expect(err).toBeInstanceOf(o.EvalError);
+    const evalErr = err as o.EvalError;
+    expect(evalErr.message).toBe(output);
+  });
 });
 
 const testEval = (input: string): o.MonkeyObject => {
