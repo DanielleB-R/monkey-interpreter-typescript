@@ -1,4 +1,4 @@
-import * as ast from "./ast";
+import * as ast from "./ast-json";
 import Lexer from "./lexer";
 import { Token, TokenType } from "./token";
 
@@ -109,16 +109,17 @@ export default class Parser {
   }
 
   parseProgram(): ast.Program {
-    const program = new ast.Program();
+    const token = this.curToken;
+    const statements: ast.Statement[] = [];
 
     while (!this.currentIs(TokenType.EOF)) {
       const statement = this.parseStatement();
       if (statement != null) {
-        program.statements.push(statement);
+        statements.push(statement);
       }
       this.nextToken();
     }
-    return program;
+    return { nodeType: ast.NodeType.PROGRAM, token, statements };
   }
 
   parseStatement(): ast.Statement | null {
@@ -138,7 +139,7 @@ export default class Parser {
       return null;
     }
 
-    const name = new ast.Identifier(this.curToken, this.curToken.literal);
+    const name = ast.buildIdentifier(this.curToken);
 
     if (!this.expectPeek(TokenType.ASSIGN)) {
       return null;
@@ -146,8 +147,8 @@ export default class Parser {
 
     this.nextToken();
 
-    const expr = this.parseExpression(Precedence.LOWEST);
-    if (!expr) {
+    const value = this.parseExpression(Precedence.LOWEST);
+    if (!value) {
       return null;
     }
 
@@ -155,15 +156,15 @@ export default class Parser {
       this.nextToken();
     }
 
-    return new ast.LetStatement(token, name, expr);
+    return { nodeType: ast.NodeType.LET, token, name, value };
   }
 
   parseReturnStatement(): ast.ReturnStatement | null {
     const token = this.curToken;
     this.nextToken();
 
-    const expr = this.parseExpression(Precedence.LOWEST);
-    if (!expr) {
+    const returnValue = this.parseExpression(Precedence.LOWEST);
+    if (!returnValue) {
       return null;
     }
 
@@ -171,7 +172,7 @@ export default class Parser {
       this.nextToken();
     }
 
-    return new ast.ReturnStatement(token, expr);
+    return { nodeType: ast.NodeType.RETURN, token, returnValue };
   }
 
   parseExpressionStatement(): ast.ExpressionStatement | null {
@@ -186,7 +187,7 @@ export default class Parser {
       this.nextToken();
     }
 
-    return new ast.ExpressionStatement(token, expression);
+    return { nodeType: ast.NodeType.EXPR_STMT, token, expression };
   }
 
   parseExpression(precedence: Precedence): ast.Expression | null {
@@ -213,23 +214,16 @@ export default class Parser {
     return leftExp;
   }
 
-  parseIdentifier = (): ast.Identifier => {
-    return new ast.Identifier(this.curToken, this.curToken.literal);
-  };
+  parseIdentifier = (): ast.Identifier => ast.buildIdentifier(this.curToken);
 
-  parseIntegerLiteral = (): ast.IntegerLiteral => {
-    return new ast.IntegerLiteral(
-      this.curToken,
-      parseInt(this.curToken.literal, 10)
-    );
-  };
+  parseIntegerLiteral = (): ast.IntegerLiteral =>
+    ast.buildInteger(this.curToken);
 
-  parseBoolean = (): ast.BooleanLiteral => {
-    return new ast.BooleanLiteral(
-      this.curToken,
-      this.currentIs(TokenType.TRUE)
-    );
-  };
+  parseBoolean = (): ast.BooleanLiteral => ({
+    nodeType: ast.NodeType.BOOL,
+    token: this.curToken,
+    value: this.currentIs(TokenType.TRUE),
+  });
 
   parsePrefixExpression = (): ast.PrefixExpression | null => {
     const token = this.curToken;
@@ -240,7 +234,7 @@ export default class Parser {
     if (!right) {
       return null;
     }
-    return new ast.PrefixExpression(token, operator, right);
+    return { nodeType: ast.NodeType.PREFIX, token, operator, right };
   };
 
   parseGroupedExpression = (): ast.Expression | null => {
@@ -263,7 +257,7 @@ export default class Parser {
     if (!right) {
       return null;
     }
-    return new ast.InfixExpression(token, left, operator, right);
+    return { nodeType: ast.NodeType.INFIX, token, left, operator, right };
   };
 
   parseIfExpression = (): ast.IfExpression | null => {
@@ -292,21 +286,27 @@ export default class Parser {
       return null;
     }
 
-    if (!this.peekIs(TokenType.ELSE)) {
-      return new ast.IfExpression(token, condition, consequence);
-    }
+    let alternative: ast.BlockStatement | undefined;
+    if (this.peekIs(TokenType.ELSE)) {
+      this.nextToken();
+      if (!this.expectPeek(TokenType.LBRACE)) {
+        return null;
+      }
 
-    this.nextToken();
-    if (!this.expectPeek(TokenType.LBRACE)) {
-      return null;
+      alternative = this.parseBlockStatement();
     }
-
-    const alternative = this.parseBlockStatement();
-    return new ast.IfExpression(token, condition, consequence, alternative);
+    return {
+      nodeType: ast.NodeType.IF,
+      token,
+      condition,
+      consequence,
+      alternative,
+    };
   };
 
   parseBlockStatement = (): ast.BlockStatement => {
-    const block = new ast.BlockStatement(this.curToken);
+    const token = this.curToken;
+    const statements: ast.Statement[] = [];
 
     this.nextToken();
 
@@ -315,12 +315,12 @@ export default class Parser {
     ) {
       const statement = this.parseStatement();
       if (statement) {
-        block.statements.push(statement);
+        statements.push(statement);
       }
       this.nextToken();
     }
 
-    return block;
+    return { nodeType: ast.NodeType.BLOCK, token, statements };
   };
 
   parseFunctionLiteral = (): ast.FunctionLiteral | null => {
@@ -341,7 +341,7 @@ export default class Parser {
 
     const body = this.parseBlockStatement();
 
-    return new ast.FunctionLiteral(token, parameters, body);
+    return { nodeType: ast.NodeType.FN, token, parameters, body };
   };
 
   parseFunctionParameters = (): ast.Identifier[] | null => {
@@ -373,7 +373,7 @@ export default class Parser {
     if (!args) {
       return null;
     }
-    return new ast.CallExpression(token, left, args);
+    return { nodeType: ast.NodeType.CALL, fn: left, token, args };
   };
 
   parseCallArguments = (): ast.Expression[] | null => {

@@ -1,6 +1,6 @@
 import Parser from "../src/parser";
 import Lexer from "../src/lexer";
-import * as ast from "../src/ast";
+import * as ast from "../src/ast-json";
 
 type Item = string | number | boolean;
 
@@ -28,8 +28,7 @@ return x;`;
 
     const returnValues: Item[] = [5, true, "x"];
     program.statements.forEach((statement, i) => {
-      expect(statement.tokenLiteral()).toBe("return");
-      expect(statement).toBeInstanceOf(ast.ReturnStatement);
+      expect(statement).toHaveProperty("nodeType", ast.NodeType.RETURN);
       const ret = statement as ast.ReturnStatement;
 
       expect(ret.returnValue).toBeDefined();
@@ -62,10 +61,7 @@ return x;`;
 
     program.statements.forEach((statement, i) => {
       const expr = extractExpression(statement);
-      expect(expr).toBeInstanceOf(ast.BooleanLiteral);
-      const literal = expr as ast.BooleanLiteral;
-
-      expect(literal.value).toBe(expectedValues[i]);
+      checkBooleanLiteral(expr, expectedValues[i]);
     });
   });
 
@@ -77,10 +73,10 @@ return x;`;
     (input: string, operator: string, integerValue: number) => {
       const expr = extractExpression(parseSingleStatement(input));
 
-      expect(expr).toBeInstanceOf(ast.PrefixExpression);
-      const prefix = expr as ast.PrefixExpression;
+      expect(expr).toHaveProperty("nodeType", ast.NodeType.PREFIX);
+      expect(expr).toHaveProperty("operator", operator);
 
-      expect(prefix.operator).toBe(operator);
+      const prefix = expr as ast.PrefixExpression;
       checkIntegerLiteral(prefix.right, integerValue);
     }
   );
@@ -115,7 +111,7 @@ return x;`;
     const input = "if (x < y) { x }";
     const expr = extractExpression(parseSingleStatement(input));
 
-    expect(expr).toBeInstanceOf(ast.IfExpression);
+    expect(expr).toHaveProperty("nodeType", ast.NodeType.IF);
     const ifExpr = expr as ast.IfExpression;
 
     checkInfixExpression(ifExpr.condition, "x", "<", "y");
@@ -130,7 +126,7 @@ return x;`;
     const input = "if (x < y) { x } else { y }";
     const expr = extractExpression(parseSingleStatement(input));
 
-    expect(expr).toBeInstanceOf(ast.IfExpression);
+    expect(expr).toHaveProperty("nodeType", ast.NodeType.IF);
     const ifExpr = expr as ast.IfExpression;
 
     checkInfixExpression(ifExpr.condition, "x", "<", "y");
@@ -149,7 +145,7 @@ return x;`;
     const input = "fn(x, y) { x + y; }";
     const expr = extractExpression(parseSingleStatement(input));
 
-    expect(expr).toBeInstanceOf(ast.FunctionLiteral);
+    expect(expr).toHaveProperty("nodeType", ast.NodeType.FN);
     const fnExpr = expr as ast.FunctionLiteral;
 
     const expectedIdents = ["x", "y"];
@@ -176,10 +172,10 @@ return x;`;
     cases.forEach(([input, names]) => {
       const expr = extractExpression(parseSingleStatement(input));
 
-      expect(expr).toBeInstanceOf(ast.FunctionLiteral);
+      expect(expr).toHaveProperty("nodeType", ast.NodeType.FN);
       const fn = expr as ast.FunctionLiteral;
 
-      expect(fn.parameters.map((ident) => ident.repr())).toEqual(names);
+      expect(fn.parameters.map(ast.repr)).toEqual(names);
     });
   });
 
@@ -187,7 +183,7 @@ return x;`;
     const input = "add(1, 2 * 3, 4 + 5)";
     const expr = extractExpression(parseSingleStatement(input));
 
-    expect(expr).toBeInstanceOf(ast.CallExpression);
+    expect(expr).toHaveProperty("nodeType", ast.NodeType.CALL);
     const call = expr as ast.CallExpression;
 
     checkIdentifier(call.fn, "add");
@@ -229,7 +225,7 @@ return x;`;
       ],
       ["add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"],
     ].forEach(([input, result]) => {
-      expect(parseInput(input).repr()).toBe(result);
+      expect(ast.repr(parseInput(input))).toBe(result);
     });
   });
 });
@@ -256,12 +252,12 @@ const checkLetStatement = (
   identifier: string,
   value: Item
 ) => {
-  expect(statement.tokenLiteral()).toBe("let");
-  expect(statement).toBeInstanceOf(ast.LetStatement);
+  expect(ast.tokenLiteral(statement)).toBe("let");
+  expect(statement).toHaveProperty("nodeType", ast.NodeType.LET);
   const letStatement = statement as ast.LetStatement;
 
   expect(letStatement.name.value).toBe(identifier);
-  expect(letStatement.name.tokenLiteral()).toBe(identifier);
+  expect(ast.tokenLiteral(letStatement.name)).toBe(identifier);
 
   checkItem(letStatement.value, value);
 };
@@ -270,30 +266,30 @@ const checkIntegerLiteral = (
   expr: ast.Expression | undefined,
   integerValue: number
 ) => {
-  expect(expr).toBeInstanceOf(ast.IntegerLiteral);
+  expect(expr).toHaveProperty("nodeType", ast.NodeType.INT);
   const literal = expr as ast.IntegerLiteral;
 
   expect(literal.value).toBe(integerValue);
-  expect(literal.tokenLiteral()).toBe(`${integerValue}`);
+  expect(ast.tokenLiteral(literal)).toBe(`${integerValue}`);
 };
 
 const checkIdentifier = (expr: ast.Expression | undefined, name: string) => {
-  expect(expr).toBeInstanceOf(ast.Identifier);
+  expect(expr).toHaveProperty("nodeType", ast.NodeType.IDENTIFIER);
   let ident = expr as ast.Identifier;
 
   expect(ident.value).toBe(name);
-  expect(ident.tokenLiteral()).toBe(name);
+  expect(ast.tokenLiteral(ident)).toBe(name);
 };
 
 const checkBooleanLiteral = (
   expr: ast.Expression | undefined,
   boolValue: boolean
 ) => {
-  expect(expr).toBeInstanceOf(ast.BooleanLiteral);
+  expect(expr).toHaveProperty("nodeType", ast.NodeType.BOOL);
   const literal = expr as ast.BooleanLiteral;
 
   expect(literal.value).toBe(boolValue);
-  expect(literal.tokenLiteral()).toBe(`${boolValue}`);
+  expect(ast.tokenLiteral(literal)).toBe(`${boolValue}`);
 };
 
 const checkItem = (expr: ast.Expression, value: Item) => {
@@ -312,7 +308,7 @@ const checkInfixExpression = (
   operator: string,
   right: string | number
 ) => {
-  expect(expr).toBeInstanceOf(ast.InfixExpression);
+  expect(expr).toHaveProperty("nodeType", ast.NodeType.INFIX);
   const infix = expr as ast.InfixExpression;
 
   checkItem(infix.left, left);
@@ -322,9 +318,6 @@ const checkInfixExpression = (
 
 // Type coercion stuff
 const extractExpression = (stmt: ast.Statement): ast.Expression => {
-  expect(stmt).toBeInstanceOf(ast.ExpressionStatement);
-  const expr = (stmt as ast.ExpressionStatement).expression;
-
-  expect(expr).toBeInstanceOf(ast.Expression);
-  return expr as ast.Expression;
+  expect(stmt).toHaveProperty("nodeType", ast.NodeType.EXPR_STMT);
+  return (stmt as ast.ExpressionStatement).expression;
 };
