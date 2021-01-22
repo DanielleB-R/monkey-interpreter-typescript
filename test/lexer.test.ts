@@ -43,7 +43,8 @@ if (5 < 10) {
 10 != 9;
 "foobar"
 "foo bar"
-[1, 2]`;
+[1, 2]
+{"foo": "bar"}`;
 
       const lexer = new Lexer(input);
 
@@ -128,6 +129,11 @@ if (5 < 10) {
         [TokenType.COMMA, ","],
         [TokenType.INT, "2"],
         [TokenType.RBRACKET, "]"],
+        [TokenType.LBRACE, "{"],
+        [TokenType.STRING, "foo"],
+        [TokenType.COLON, ":"],
+        [TokenType.STRING, "bar"],
+        [TokenType.RBRACE, "}"],
         [TokenType.EOF, ""],
       ].forEach(([tokenType, literal]) => {
         expect(lexer.nextToken()).toEqual({ tokenType, literal });

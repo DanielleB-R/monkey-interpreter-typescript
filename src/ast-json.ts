@@ -17,6 +17,7 @@ export enum NodeType {
   STR = "string",
   ARRAY = "array",
   INDEX = "index",
+  HASH = "hash",
 }
 
 export interface NodeBase {
@@ -129,6 +130,11 @@ export interface ArrayLiteral extends NodeBase {
   elements: Expression[];
 }
 
+export interface HashLiteral extends NodeBase {
+  nodeType: NodeType.HASH;
+  pairs: [Expression, Expression][];
+}
+
 export interface IndexExpression extends NodeBase {
   nodeType: NodeType.INDEX;
   left: Expression;
@@ -146,6 +152,7 @@ export type Expression =
   | CallExpression
   | StringLiteral
   | ArrayLiteral
+  | HashLiteral
   | IndexExpression;
 
 export type Node = Program | Statement | Expression;
@@ -192,5 +199,9 @@ export function repr(node: Node): string {
       return `[${node.elements.map(repr).join(", ")}]`;
     case NodeType.INDEX:
       return `(${repr(node.left)}[${repr(node.index)}])`;
+    case NodeType.HASH:
+      return `{${node.pairs
+        .map(([key, value]) => `${repr(key)}:${repr(value)}`)
+        .join(", ")}}`;
   }
 }

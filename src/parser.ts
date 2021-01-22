@@ -60,6 +60,7 @@ export default class Parser {
     this.prefixParseFns.set(TokenType.FUNCTION, this.parseFunctionLiteral);
     this.prefixParseFns.set(TokenType.STRING, this.parseStringLiteral);
     this.prefixParseFns.set(TokenType.LBRACKET, this.parseArrayLiteral);
+    this.prefixParseFns.set(TokenType.LBRACE, this.parseHashLiteral);
 
     this.infixParseFns.set(TokenType.PLUS, this.parseInfixExpression);
     this.infixParseFns.set(TokenType.MINUS, this.parseInfixExpression);
@@ -443,5 +444,36 @@ export default class Parser {
       return null;
     }
     return { nodeType: ast.NodeType.INDEX, token, left, index };
+  };
+
+  parseHashLiteral = (): ast.HashLiteral | null => {
+    const token = this.curToken;
+    const pairs: [ast.Expression, ast.Expression][] = [];
+
+    while (!this.peekIs(TokenType.RBRACE) && !this.peekIs(TokenType.EOF)) {
+      this.nextToken();
+
+      const key = this.parseExpression(Precedence.LOWEST);
+      if (!this.expectPeek(TokenType.COLON)) {
+        return null;
+      }
+
+      this.nextToken();
+      const value = this.parseExpression(Precedence.LOWEST);
+
+      if (!key || !value) {
+        return null;
+      }
+      pairs.push([key, value]);
+      if (!this.peekIs(TokenType.RBRACE) && !this.expectPeek(TokenType.COMMA)) {
+        return null;
+      }
+    }
+
+    if (!this.expectPeek(TokenType.RBRACE)) {
+      return null;
+    }
+
+    return { nodeType: ast.NodeType.HASH, token, pairs };
   };
 }

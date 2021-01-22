@@ -197,11 +197,7 @@ return x;`;
   it("should parse string literals correctly", () => {
     const input = `"hello world";`;
     const expr = extractExpression(parseSingleStatement(input));
-
-    expect(expr).toHaveProperty("nodeType", ast.NodeType.STR);
-    const str = expr as ast.StringLiteral;
-
-    expect(str.value).toBe("hello world");
+    checkStringLiteral(expr, "hello world");
   });
 
   it("should parse array literals correctly", () => {
@@ -227,6 +223,56 @@ return x;`;
 
     checkIdentifier(index.left, "myArray");
     checkInfixExpression(index.index, 1, "+", 1);
+  });
+
+  it("should parse hash literals with string keys correctly", () => {
+    const input = `{"one": 1, "two": 2, "three": 3}`;
+    const outputPairs: [string, number][] = [
+      ["one", 1],
+      ["two", 2],
+      ["three", 3],
+    ];
+
+    const expr = extractExpression(parseSingleStatement(input));
+
+    expect(expr).toHaveProperty("nodeType", ast.NodeType.HASH);
+    const hash = expr as ast.HashLiteral;
+
+    hash.pairs.forEach(([key, value], i) => {
+      const [outputKey, outputValue] = outputPairs[i];
+      checkStringLiteral(key, outputKey);
+      checkIntegerLiteral(value, outputValue);
+    });
+  });
+
+  it("should parse hash literals with integer keys correctly", () => {
+    const input = `{1: "one", 2: "two", 3: "three"}`;
+    const outputPairs: [number, string][] = [
+      [1, "one"],
+      [2, "two"],
+      [3, "three"],
+    ];
+
+    const expr = extractExpression(parseSingleStatement(input));
+
+    expect(expr).toHaveProperty("nodeType", ast.NodeType.HASH);
+    const hash = expr as ast.HashLiteral;
+
+    hash.pairs.forEach(([key, value], i) => {
+      const [outputKey, outputValue] = outputPairs[i];
+      checkIntegerLiteral(key, outputKey);
+      checkStringLiteral(value, outputValue);
+    });
+  });
+
+  it("should parse empty hash literals correctly", () => {
+    const input = `{}`;
+
+    const expr = extractExpression(parseSingleStatement(input));
+
+    expect(expr).toHaveProperty("nodeType", ast.NodeType.HASH);
+    const hash = expr as ast.HashLiteral;
+    expect(hash.pairs).toHaveLength(0);
   });
 
   it("should resolve precedence correctly", () => {
@@ -354,6 +400,16 @@ const checkInfixExpression = (
   checkItem(infix.left, left);
   expect(infix.operator).toBe(operator);
   checkItem(infix.right, right);
+};
+
+const checkStringLiteral = (
+  expr: ast.Expression | undefined,
+  value: string
+) => {
+  expect(expr).toHaveProperty("nodeType", ast.NodeType.STR);
+  const str = expr as ast.StringLiteral;
+
+  expect(str.value).toBe(value);
 };
 
 // Type coercion stuff
