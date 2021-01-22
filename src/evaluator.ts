@@ -1,4 +1,4 @@
-import * as ast from "./ast";
+import * as ast from "./ast-json";
 import * as o from "./object";
 
 const NULL = new o.MonkeyNull();
@@ -8,62 +8,51 @@ const FALSE = new o.MonkeyBoolean(false);
 const objectifyBoolean = (b: boolean): o.MonkeyBoolean => (b ? TRUE : FALSE);
 
 const monkeyEval = (node: ast.Node, env: o.Environment): o.MonkeyObject => {
-  if (node instanceof ast.Program) {
-    return evalProgram(node, env);
-  }
-  if (node instanceof ast.ExpressionStatement) {
-    return monkeyEval(node.expression, env);
-  }
-  if (node instanceof ast.BlockStatement) {
-    return evalBlock(node, env);
-  }
-  if (node instanceof ast.ReturnStatement) {
-    const returnValue = monkeyEval(node.returnValue, env);
-    return new o.ReturnValue(returnValue);
-  }
-  if (node instanceof ast.LetStatement) {
-    const value = monkeyEval(node.value, env);
-    return env.setValue(node.name.value, value);
-  }
-  if (node instanceof ast.IntegerLiteral) {
-    return new o.MonkeyInteger(node.value);
-  }
-  if (node instanceof ast.BooleanLiteral) {
-    return objectifyBoolean(node.value);
-  }
-  if (node instanceof ast.PrefixExpression) {
-    const right = monkeyEval(node.right, env);
-    return evalPrefixExpression(node.operator, right);
-  }
-  if (node instanceof ast.InfixExpression) {
-    const left = monkeyEval(node.left, env);
-    const right = monkeyEval(node.right, env);
-    return evalInfixExpression(left, node.operator, right);
-  }
-  if (node instanceof ast.IfExpression) {
-    return evalConditionalExpression(node, env);
-  }
-  if (node instanceof ast.Identifier) {
-    return evalIdentifier(node, env);
-  }
-  if (node instanceof ast.FunctionLiteral) {
-    return new o.MonkeyFunction(node.parameters, node.body, env);
-  }
-  if (node instanceof ast.CallExpression) {
-    const fn = monkeyEval(node.fn, env);
-    if (!(fn instanceof o.MonkeyFunction)) {
-      throw new o.EvalError(
-        `calling non-callable value: type ${fn.objectType}`
-      );
-    }
-    const args = node.args.map((arg) => monkeyEval(arg, env));
+  switch (node.nodeType) {
+    case ast.NodeType.PROGRAM:
+      return evalProgram(node, env);
+    case ast.NodeType.EXPR_STMT:
+      return monkeyEval(node.expression, env);
+    case ast.NodeType.BLOCK:
+      return evalBlock(node, env);
+    case ast.NodeType.RETURN:
+      const returnValue = monkeyEval(node.returnValue, env);
+      return new o.ReturnValue(returnValue);
+    case ast.NodeType.LET:
+      const value = monkeyEval(node.value, env);
+      return env.setValue(node.name.value, value);
+    case ast.NodeType.INT:
+      return new o.MonkeyInteger(node.value);
+    case ast.NodeType.BOOL:
+      return objectifyBoolean(node.value);
+    case ast.NodeType.PREFIX:
+      const right = monkeyEval(node.right, env);
+      return evalPrefixExpression(node.operator, right);
+    case ast.NodeType.INFIX:
+      const left = monkeyEval(node.left, env);
+      const rightValue = monkeyEval(node.right, env);
+      return evalInfixExpression(left, node.operator, rightValue);
+    case ast.NodeType.IF:
+      return evalConditionalExpression(node, env);
+    case ast.NodeType.IDENTIFIER:
+      return evalIdentifier(node, env);
+    case ast.NodeType.FN:
+      return new o.MonkeyFunction(node.parameters, node.body, env);
+    case ast.NodeType.CALL:
+      const fn = monkeyEval(node.fn, env);
+      if (!(fn instanceof o.MonkeyFunction)) {
+        throw new o.EvalError(
+          `calling non-callable value: type ${fn.objectType}`
+        );
+      }
+      const args = node.args.map((arg) => monkeyEval(arg, env));
 
-    const innerEnv = o.Environment.enclosing(fn.env);
-    args.forEach((arg, i) => innerEnv.setValue(fn.parameters[i].value, arg));
+      const innerEnv = o.Environment.enclosing(fn.env);
+      args.forEach((arg, i) => innerEnv.setValue(fn.parameters[i].value, arg));
 
-    const result = monkeyEval(fn.body, innerEnv);
+      const result = monkeyEval(fn.body, innerEnv);
 
-    return result instanceof o.ReturnValue ? result.value : result;
+      return result instanceof o.ReturnValue ? result.value : result;
   }
 
   throw new o.EvalError("Unimplemented!");

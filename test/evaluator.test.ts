@@ -2,6 +2,7 @@ import Lexer from "../src/lexer";
 import Parser from "../src/parser";
 import monkeyEval from "../src/evaluator";
 import * as o from "../src/object";
+import * as ast from "../src/ast-json";
 
 const integerTest = (input: string, output: number) => {
   const result = testEval(input);
@@ -148,7 +149,7 @@ return 1; }`,
     expect(fn.parameters).toHaveLength(1);
     expect(fn.parameters[0]).toHaveProperty("value", "x");
 
-    expect(fn.body.repr()).toBe("(x + 2)");
+    expect(ast.repr(fn.body)).toBe("(x + 2)");
   });
 
   it.each([

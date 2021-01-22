@@ -1,4 +1,4 @@
-import * as ast from "./ast";
+import * as ast from "./ast-json";
 
 export enum ObjectType {
   INTEGER = "INTEGER",
@@ -86,7 +86,7 @@ export class MonkeyFunction extends MonkeyObject {
   inspect(): string {
     return `fn(${this.parameters
       .map((param) => param.value)
-      .join(", ")}) {\n${this.body.repr()}\n}`;
+      .join(", ")}) {\n${ast.repr(this.body)}\n}`;
   }
 }
 
