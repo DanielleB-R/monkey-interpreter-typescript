@@ -233,11 +233,38 @@ let addTwo = newAdder(2); addTwo(2);`,
     [`len("")`, 0],
     [`len("four")`, 4],
     [`len("hello world")`, 11],
+    [`len([1, 2, 3])`, 3],
     [`len(1)`, "argument to len() not supported, got INTEGER"],
     [`len("one", "two")`, "len() takes one arg, got 2"],
+    [`first([2, 3])`, 2],
+    [`first([])`, null],
+    [`last([2, 3])`, 3],
+    [`last([])`, null],
+    [`rest([1, 2, 3])`, [2, 3]],
+    [`rest([2, 3])`, [3]],
+    [`rest([3])`, []],
+    [`rest([])`, null],
+    [`push([], 8)`, [8]],
+    [`push([8], 9)`, [8, 9]],
+    [`push([8, 9], 10)`, [8, 9, 10]],
   ])("should evaluate builtin expressions correctly (%s)", (input, output) => {
     if (typeof output === "number") {
       integerTest(input, output);
+      return;
+    }
+    if (output === null) {
+      const result = testEval(input);
+      expect(result).toBeInstanceOf(o.MonkeyNull);
+      return;
+    }
+    if (Array.isArray(output)) {
+      const result = testEval(input);
+      expect(result).toBeInstanceOf(o.MonkeyArray);
+      const arr = result as o.MonkeyArray;
+
+      arr.elements.forEach((actual, i) =>
+        checkIntegerObject(actual, output[i])
+      );
       return;
     }
     let err;
@@ -250,6 +277,44 @@ let addTwo = newAdder(2); addTwo(2);`,
     expect(err).toBeInstanceOf(o.EvalError);
     const evalErr = err as o.EvalError;
     expect(evalErr.message).toBe(output);
+  });
+
+  it("should evaluate higher-order array functions correctly (map)", () => {
+    const input = `let map = fn(arr, f) {
+let iter = fn(arr, accumulated) {
+if (len(arr) == 0) { accumulated
+} else {
+iter(rest(arr), push(accumulated, f(first(arr))));
+} };
+     iter(arr, []);
+   };
+let a = [1, 2, 3, 4];
+let double = fn(x) { x * 2 };
+map(a, double);`;
+
+    const output = [2, 4, 6, 8];
+    const result = testEval(input);
+    expect(result).toBeInstanceOf(o.MonkeyArray);
+    const arr = result as o.MonkeyArray;
+
+    arr.elements.forEach((actual, i) => checkIntegerObject(actual, output[i]));
+  });
+
+  it("should evaluate higher-order array functions correctly (reduce)", () => {
+    const input = `let reduce = fn(arr, initial, f) { let iter = fn(arr, result) {
+if (len(arr) == 0) { result
+} else {
+iter(rest(arr), f(result, first(arr)));
+}
+};
+     iter(arr, initial);
+};
+let sum = fn(arr) {
+reduce(arr, 0, fn(initial, el) { initial + el });
+};
+sum([1, 2, 3, 4, 5]);`;
+
+    integerTest(input, 15);
   });
 });
 
