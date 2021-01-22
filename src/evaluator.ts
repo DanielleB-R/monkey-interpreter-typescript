@@ -39,23 +39,8 @@ const monkeyEval = (node: ast.Node, env: o.Environment): o.MonkeyObject => {
     case ast.NodeType.FN:
       return new o.MonkeyFunction(node.parameters, node.body, env);
     case ast.NodeType.CALL:
-      const fn = monkeyEval(node.fn, env);
-      if (!(fn instanceof o.MonkeyFunction)) {
-        throw new o.EvalError(
-          `calling non-callable value: type ${fn.objectType}`
-        );
-      }
-      const args = node.args.map((arg) => monkeyEval(arg, env));
-
-      const innerEnv = o.Environment.enclosing(fn.env);
-      args.forEach((arg, i) => innerEnv.setValue(fn.parameters[i].value, arg));
-
-      const result = monkeyEval(fn.body, innerEnv);
-
-      return result instanceof o.ReturnValue ? result.value : result;
+      return evalCallExpression(node, env);
   }
-
-  throw new o.EvalError("Unimplemented!");
 };
 
 const evalProgram = (
@@ -247,6 +232,24 @@ const evalIdentifier = (
     throw new o.EvalError(`undefined name ${ident.value}`);
   }
   return value;
+};
+
+const evalCallExpression = (
+  call: ast.CallExpression,
+  env: o.Environment
+): o.MonkeyObject => {
+  const fn = monkeyEval(call.fn, env);
+  if (!(fn instanceof o.MonkeyFunction)) {
+    throw new o.EvalError(`calling non-callable value: type ${fn.objectType}`);
+  }
+  const args = call.args.map((arg) => monkeyEval(arg, env));
+
+  const innerEnv = o.Environment.enclosing(fn.env);
+  args.forEach((arg, i) => innerEnv.setValue(fn.parameters[i].value, arg));
+
+  const result = monkeyEval(fn.body, innerEnv);
+
+  return result instanceof o.ReturnValue ? result.value : result;
 };
 
 const isTruthy = (obj: o.MonkeyObject): boolean =>
