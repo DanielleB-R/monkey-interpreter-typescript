@@ -204,6 +204,31 @@ return x;`;
     expect(str.value).toBe("hello world");
   });
 
+  it("should parse array literals correctly", () => {
+    const input = "[1, 2 * 2, 3 + 3]";
+    const expr = extractExpression(parseSingleStatement(input));
+
+    expect(expr).toHaveProperty("nodeType", ast.NodeType.ARRAY);
+    const arr = expr as ast.ArrayLiteral;
+
+    expect(arr.elements).toHaveLength(3);
+
+    checkIntegerLiteral(arr.elements[0], 1);
+    checkInfixExpression(arr.elements[1], 2, "*", 2);
+    checkInfixExpression(arr.elements[2], 3, "+", 3);
+  });
+
+  it("should parse index expressions correctly", () => {
+    const input = "myArray[1 + 1]";
+    const expr = extractExpression(parseSingleStatement(input));
+
+    expect(expr).toHaveProperty("nodeType", ast.NodeType.INDEX);
+    const index = expr as ast.IndexExpression;
+
+    checkIdentifier(index.left, "myArray");
+    checkInfixExpression(index.index, 1, "+", 1);
+  });
+
   it("should resolve precedence correctly", () => {
     [
       ["-a * b", "((-a) * b)"],
@@ -234,6 +259,11 @@ return x;`;
         "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
       ],
       ["add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"],
+      ["a * [1, 2, 3, 4][b * c] * d", "((a * ([1, 2, 3, 4][(b * c)])) * d)"],
+      [
+        "add(a * b[2], b[1], 2 * [1, 2][1])",
+        "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
+      ],
     ].forEach(([input, result]) => {
       expect(ast.repr(parseInput(input))).toBe(result);
     });

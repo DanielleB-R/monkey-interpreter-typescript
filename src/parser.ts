@@ -10,6 +10,7 @@ enum Precedence {
   PRODUCT,
   PREFIX,
   CALL,
+  INDEX,
 }
 
 const PRECEDENCE_LEVELS: Map<TokenType, Precedence> = new Map([
@@ -22,6 +23,7 @@ const PRECEDENCE_LEVELS: Map<TokenType, Precedence> = new Map([
   [TokenType.ASTERISK, Precedence.PRODUCT],
   [TokenType.SLASH, Precedence.PRODUCT],
   [TokenType.LPAREN, Precedence.CALL],
+  [TokenType.LBRACKET, Precedence.INDEX],
 ]);
 
 interface PrefixParseFn {
@@ -57,6 +59,7 @@ export default class Parser {
     this.prefixParseFns.set(TokenType.IF, this.parseIfExpression);
     this.prefixParseFns.set(TokenType.FUNCTION, this.parseFunctionLiteral);
     this.prefixParseFns.set(TokenType.STRING, this.parseStringLiteral);
+    this.prefixParseFns.set(TokenType.LBRACKET, this.parseArrayLiteral);
 
     this.infixParseFns.set(TokenType.PLUS, this.parseInfixExpression);
     this.infixParseFns.set(TokenType.MINUS, this.parseInfixExpression);
@@ -67,6 +70,7 @@ export default class Parser {
     this.infixParseFns.set(TokenType.EQ, this.parseInfixExpression);
     this.infixParseFns.set(TokenType.NOT_EQ, this.parseInfixExpression);
     this.infixParseFns.set(TokenType.LPAREN, this.parseCallExpression);
+    this.infixParseFns.set(TokenType.LBRACKET, this.parseIndexExpression);
   }
 
   private nextToken() {
@@ -370,18 +374,18 @@ export default class Parser {
 
   parseCallExpression = (left: ast.Expression): ast.CallExpression | null => {
     const token = this.curToken;
-    const args = this.parseCallArguments();
+    const args = this.parseExpressionList(TokenType.RPAREN);
     if (!args) {
       return null;
     }
     return { nodeType: ast.NodeType.CALL, fn: left, token, args };
   };
 
-  parseCallArguments = (): ast.Expression[] | null => {
+  parseExpressionList = (end: TokenType): ast.Expression[] | null => {
     const args: ast.Expression[] = [];
     this.nextToken();
 
-    if (this.currentIs(TokenType.RPAREN)) {
+    if (this.currentIs(end)) {
       return args;
     }
 
@@ -401,7 +405,7 @@ export default class Parser {
       args.push(expr);
     }
 
-    if (!this.expectPeek(TokenType.RPAREN)) {
+    if (!this.expectPeek(end)) {
       return null;
     }
 
@@ -414,5 +418,30 @@ export default class Parser {
       token: this.curToken,
       value: this.curToken.literal,
     };
+  };
+
+  parseArrayLiteral = (): ast.ArrayLiteral | null => {
+    const token = this.curToken;
+
+    const elements = this.parseExpressionList(TokenType.RBRACKET);
+    if (!elements) {
+      return null;
+    }
+    return { nodeType: ast.NodeType.ARRAY, token, elements };
+  };
+
+  parseIndexExpression = (left: ast.Expression): ast.IndexExpression | null => {
+    const token = this.curToken;
+    this.nextToken();
+
+    const index = this.parseExpression(Precedence.LOWEST);
+    if (!index) {
+      return null;
+    }
+
+    if (!this.expectPeek(TokenType.RBRACKET)) {
+      return null;
+    }
+    return { nodeType: ast.NodeType.INDEX, token, left, index };
   };
 }

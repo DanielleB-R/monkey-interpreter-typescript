@@ -52,6 +52,8 @@ const TOKEN_READERS: TokenReaderMap = {
   ")": input_token(TokenType.RPAREN),
   "{": input_token(TokenType.LBRACE),
   "}": input_token(TokenType.RBRACE),
+  "[": input_token(TokenType.LBRACKET),
+  "]": input_token(TokenType.RBRACKET),
   ",": input_token(TokenType.COMMA),
   ";": input_token(TokenType.SEMICOLON),
   let: input_token(TokenType.LET),

@@ -12,6 +12,7 @@ export enum ObjectType {
   FUNCTION = "FUNCTION",
   STRING = "STRING",
   BUILTIN = "BUILTIN",
+  ARRAY = "ARRAY",
 }
 
 export abstract class MonkeyObject {
@@ -60,6 +61,19 @@ export class MonkeyString extends MonkeyObject {
 
   inspect(): string {
     return this.value;
+  }
+}
+
+export class MonkeyArray extends MonkeyObject {
+  elements: MonkeyObject[];
+
+  constructor(elements: MonkeyObject[]) {
+    super(ObjectType.ARRAY);
+    this.elements = elements;
+  }
+
+  inspect(): string {
+    return `[${this.elements.map((obj) => obj.inspect()).join(", ")}]`;
   }
 }
 

@@ -40,6 +40,12 @@ const monkeyEval = (node: ast.Node, env: o.Environment): o.MonkeyObject => {
       return evalCallExpression(node, env);
     case ast.NodeType.STR:
       return new o.MonkeyString(node.value);
+    case ast.NodeType.ARRAY:
+      return new o.MonkeyArray(
+        node.elements.map((expr) => monkeyEval(expr, env))
+      );
+    case ast.NodeType.INDEX:
+      return evalIndexExpression(node, env);
   }
 };
 
@@ -295,6 +301,24 @@ const evalBuiltinCall = (
   const args = call.args.map((arg) => monkeyEval(arg, env));
 
   return fn.fn(...args);
+};
+
+const evalIndexExpression = (
+  expr: ast.IndexExpression,
+  env: o.Environment
+): o.MonkeyObject => {
+  const arr = monkeyEval(expr.left, env);
+  if (!(arr instanceof o.MonkeyArray)) {
+    throw new o.EvalError("indexed non-indexable type ${arr.objectType}");
+  }
+  const index = monkeyEval(expr.index, env);
+  if (!(index instanceof o.MonkeyInteger)) {
+    throw new o.EvalError(
+      "indexing array with non-integer type ${index.objectType}"
+    );
+  }
+
+  return arr.elements[index.value] ?? NULL;
 };
 
 const isTruthy = (obj: o.MonkeyObject): boolean =>

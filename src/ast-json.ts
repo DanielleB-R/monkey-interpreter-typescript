@@ -15,6 +15,8 @@ export enum NodeType {
   FN = "function",
   CALL = "call",
   STR = "string",
+  ARRAY = "array",
+  INDEX = "index",
 }
 
 export interface NodeBase {
@@ -122,6 +124,17 @@ export interface StringLiteral extends NodeBase {
   value: string;
 }
 
+export interface ArrayLiteral extends NodeBase {
+  nodeType: NodeType.ARRAY;
+  elements: Expression[];
+}
+
+export interface IndexExpression extends NodeBase {
+  nodeType: NodeType.INDEX;
+  left: Expression;
+  index: Expression;
+}
+
 export type Expression =
   | Identifier
   | IntegerLiteral
@@ -131,7 +144,9 @@ export type Expression =
   | IfExpression
   | FunctionLiteral
   | CallExpression
-  | StringLiteral;
+  | StringLiteral
+  | ArrayLiteral
+  | IndexExpression;
 
 export type Node = Program | Statement | Expression;
 
@@ -173,5 +188,9 @@ export function repr(node: Node): string {
       return `${repr(node.fn)}(${node.args.map(repr).join(", ")})`;
     case NodeType.STR:
       return node.value;
+    case NodeType.ARRAY:
+      return `[${node.elements.map(repr).join(", ")}]`;
+    case NodeType.INDEX:
+      return `(${repr(node.left)}[${repr(node.index)}])`;
   }
 }

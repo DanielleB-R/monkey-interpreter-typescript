@@ -192,6 +192,43 @@ let addTwo = newAdder(2); addTwo(2);`,
     expect(str.value).toBe("Hello World!");
   });
 
+  it("should evaluate array literals correctly", () => {
+    const input = "[1, 2*2, 3+3]";
+    const result = testEval(input);
+
+    expect(result).toBeInstanceOf(o.MonkeyArray);
+    const arr = result as o.MonkeyArray;
+
+    expect(arr.elements).toHaveLength(3);
+
+    checkIntegerObject(arr.elements[0], 1);
+    checkIntegerObject(arr.elements[1], 4);
+    checkIntegerObject(arr.elements[2], 6);
+  });
+
+  it.each([
+    ["[1, 2, 3][0]", 1],
+    ["[1, 2, 3][1]", 2],
+    ["[1, 2, 3][2]", 3],
+    ["let i = 0; [1][i];", 1],
+    ["[1, 2, 3][1 + 1];", 3],
+    ["let myArray = [1, 2, 3]; myArray[2];", 3],
+    ["let myArray = [1, 2, 3]; myArray[0] + myArray[1] + myArray[2];", 6],
+    ["let myArray = [1, 2, 3]; let i = myArray[0]; myArray[i] ", 2],
+    ["[1, 2, 3][3]", null],
+    ["[1, 2, 3][-1]", null],
+  ])(
+    "should correctly evaluate (%s) as an index expression",
+    (input, output) => {
+      if (output !== null) {
+        integerTest(input, output);
+        return;
+      }
+      const result = testEval(input);
+      expect(result).toBeInstanceOf(o.MonkeyNull);
+    }
+  );
+
   it.each([
     [`len("")`, 0],
     [`len("four")`, 4],
