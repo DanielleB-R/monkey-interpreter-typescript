@@ -47,6 +47,8 @@ const monkeyEval = (node: ast.Node, env: o.Environment): o.MonkeyObject => {
       return { objectType: o.ObjectType.STRING, value: node.value };
     case ast.NodeType.ARRAY:
       return o.wrapArray(node.elements.map((expr) => monkeyEval(expr, env)));
+    case ast.NodeType.HASH:
+      return evalHashLiteral(node, env);
     case ast.NodeType.INDEX:
       return evalIndexExpression(node, env);
   }
@@ -329,6 +331,21 @@ const evalIndexExpression = (
   }
 
   return arr.elements[index.value] ?? NULL;
+};
+
+const evalHashLiteral = (
+  expr: ast.HashLiteral,
+  env: o.Environment
+): o.MonkeyObject => {
+  return {
+    objectType: o.ObjectType.HASH,
+    map: new Map(
+      expr.pairs.map(([key, value]) => [
+        o.hashKey(monkeyEval(key, env)),
+        monkeyEval(value, env),
+      ])
+    ),
+  };
 };
 
 const isTruthy = (obj: o.MonkeyObject): boolean =>

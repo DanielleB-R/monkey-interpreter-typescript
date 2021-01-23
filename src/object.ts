@@ -13,7 +13,10 @@ export enum ObjectType {
   STRING = "STRING",
   BUILTIN = "BUILTIN",
   ARRAY = "ARRAY",
+  HASH = "HASH",
 }
+
+export type HashKey = string | number | boolean;
 
 export interface ObjectBase {
   objectType: ObjectType;
@@ -65,6 +68,11 @@ export function isArray(value: MonkeyObject): value is MonkeyArray {
   return value.objectType === ObjectType.ARRAY;
 }
 
+export interface MonkeyHash extends ObjectBase {
+  objectType: ObjectType.HASH;
+  map: Map<HashKey, MonkeyObject>;
+}
+
 export interface MonkeyNull extends ObjectBase {
   objectType: ObjectType.NULL;
 }
@@ -102,6 +110,7 @@ export type MonkeyObject =
   | MonkeyBoolean
   | MonkeyString
   | MonkeyArray
+  | MonkeyHash
   | MonkeyNull
   | ReturnValue
   | MonkeyFunction
@@ -164,5 +173,20 @@ export function inspect(obj: MonkeyObject): string {
         .join(", ")}) {\n${ast.repr(obj.body)}\n}`;
     case ObjectType.BUILTIN:
       return "builtin function";
+    case ObjectType.HASH:
+      const pairs: string[] = [];
+      obj.map.forEach((value, key) => pairs.push(`${key}: ${inspect(value)}`));
+      return `{${pairs.join(", ")}}`;
+  }
+}
+
+export function hashKey(obj: MonkeyObject): HashKey {
+  switch (obj.objectType) {
+    case ObjectType.INTEGER:
+    case ObjectType.BOOLEAN:
+    case ObjectType.STRING:
+      return obj.value;
+    default:
+      throw new EvalError(`hashing non-hashable type ${obj.objectType}`);
   }
 }

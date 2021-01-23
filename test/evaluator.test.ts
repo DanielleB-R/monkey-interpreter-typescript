@@ -206,6 +206,31 @@ let addTwo = newAdder(2); addTwo(2);`,
     checkIntegerObject(arr.elements[2], 6);
   });
 
+  it("should evaluate hash literals correctly", () => {
+    const input = `let two = "two";
+{
+"one": 10 - 9,
+two: 1 + 1,
+"thr" + "ee": 6 / 2,
+4: 4,
+true: 5,
+false: 6
+} `;
+
+    const result = testEval(input);
+    expect(result).toHaveProperty("objectType", o.ObjectType.HASH);
+    const hash = result as o.MonkeyHash;
+
+    expect(hash.map.size).toBe(6);
+
+    checkIntegerObject(hash.map.get("one"), 1);
+    checkIntegerObject(hash.map.get("two"), 2);
+    checkIntegerObject(hash.map.get("three"), 3);
+    checkIntegerObject(hash.map.get(4), 4);
+    checkIntegerObject(hash.map.get(true), 5);
+    checkIntegerObject(hash.map.get(false), 6);
+  });
+
   it.each([
     ["[1, 2, 3][0]", 1],
     ["[1, 2, 3][1]", 2],
@@ -327,7 +352,7 @@ const testEval = (input: string): o.MonkeyObject => {
   return monkeyEval(program, new o.Environment());
 };
 
-const checkIntegerObject = (result: o.MonkeyObject, n: number) => {
+const checkIntegerObject = (result: o.MonkeyObject | undefined, n: number) => {
   expect(result).toHaveProperty("objectType", o.ObjectType.INTEGER);
   const integer = result as o.MonkeyInteger;
 
