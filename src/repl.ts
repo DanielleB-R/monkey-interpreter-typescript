@@ -2,7 +2,7 @@ import * as readline from "readline";
 import Lexer from "./lexer";
 import Parser from "./parser";
 import monkeyEval from "./evaluator";
-import { Environment } from "./object";
+import { Environment, inspect } from "./object";
 
 const PROMPT = ">> ";
 
@@ -30,7 +30,7 @@ const startRepl = async () => {
       continue;
     }
 
-    console.log(monkeyEval(program, env).inspect());
+    console.log(inspect(monkeyEval(program, env)));
   }
 };
 

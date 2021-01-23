@@ -108,6 +108,17 @@ const BUILTINS: Map<string, o.Builtin> = new Map([
       },
     },
   ],
+  [
+    "puts",
+    {
+      objectType: o.ObjectType.BUILTIN,
+      fn: (...args: o.MonkeyObject[]): o.MonkeyObject => {
+        args.forEach((arg) => console.log(o.inspect(arg)));
+
+        return o.NULL;
+      },
+    },
+  ],
 ]);
 
 export default BUILTINS;
