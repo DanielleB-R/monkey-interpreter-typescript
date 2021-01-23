@@ -304,6 +304,24 @@ false: 6
     expect(evalErr.message).toBe(output);
   });
 
+  it.each([
+    [`{"foo": 5}["foo"]`, 5],
+    [`{"foo": 5}["bar"]`, null],
+    [`let key = "foo"; {"foo": 5}[key]`, 5],
+    [`{}["foo"]`, null],
+    [`{5: 5}[5]`, 5],
+    [`{true: 5}[true]`, 5],
+    [`{false: 5}[false]`, 5],
+  ])(
+    "should evaluate hash index operations correctly (%s)",
+    (input, output) => {
+      if (output !== null) {
+        return integerTest(input, output);
+      }
+      checkNullObject(testEval(input));
+    }
+  );
+
   it("should evaluate higher-order array functions correctly (map)", () => {
     const input = `let map = fn(arr, f) {
 let iter = fn(arr, accumulated) {

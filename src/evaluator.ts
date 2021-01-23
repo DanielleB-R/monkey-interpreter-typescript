@@ -319,18 +319,24 @@ const evalIndexExpression = (
   expr: ast.IndexExpression,
   env: o.Environment
 ): o.MonkeyObject => {
-  const arr = monkeyEval(expr.left, env);
-  if (!o.isArray(arr)) {
-    throw new o.EvalError("indexed non-indexable type ${arr.objectType}");
-  }
-  const index = monkeyEval(expr.index, env);
-  if (!o.isInteger(index)) {
-    throw new o.EvalError(
-      "indexing array with non-integer type ${index.objectType}"
-    );
-  }
+  const left = monkeyEval(expr.left, env);
+  switch (left.objectType) {
+    case o.ObjectType.ARRAY:
+      const index = monkeyEval(expr.index, env);
+      if (!o.isInteger(index)) {
+        throw new o.EvalError(
+          `indexing array with non-integer type ${index.objectType}`
+        );
+      }
 
-  return arr.elements[index.value] ?? NULL;
+      return left.elements[index.value] ?? NULL;
+    case o.ObjectType.HASH:
+      const key = o.hashKey(monkeyEval(expr.index, env));
+
+      return left.map.get(key) ?? NULL;
+    default:
+      throw new o.EvalError(`indexed non-indexable type ${left.objectType}`);
+  }
 };
 
 const evalHashLiteral = (
