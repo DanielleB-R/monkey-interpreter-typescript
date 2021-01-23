@@ -22,7 +22,6 @@ export enum NodeType {
 
 export interface NodeBase {
   nodeType: NodeType;
-  token: Token;
 }
 
 export interface Program extends NodeBase {
@@ -65,7 +64,6 @@ export interface Identifier extends NodeBase {
 export function buildIdentifier(token: Token): Identifier {
   return {
     nodeType: NodeType.IDENTIFIER,
-    token,
     value: token.literal,
   };
 }
@@ -78,7 +76,6 @@ export interface IntegerLiteral extends NodeBase {
 export function buildInteger(token: Token): IntegerLiteral {
   return {
     nodeType: NodeType.INT,
-    token,
     value: parseInt(token.literal, 10),
   };
 }
@@ -157,13 +154,6 @@ export type Expression =
 
 export type Node = Program | Statement | Expression;
 
-export function tokenLiteral(node: Node): string {
-  if (node.nodeType === NodeType.PROGRAM) {
-    return node.statements[0]?.token.literal ?? "";
-  }
-  return node.token.literal;
-}
-
 export function repr(node: Node): string {
   switch (node.nodeType) {
     case NodeType.PROGRAM:
@@ -180,7 +170,7 @@ export function repr(node: Node): string {
       return node.value;
     case NodeType.INT:
     case NodeType.BOOL:
-      return node.token.literal;
+      return `${node.value}`;
     case NodeType.PREFIX:
       return `(${node.operator}${repr(node.right)})`;
     case NodeType.INFIX:

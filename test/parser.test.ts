@@ -338,12 +338,10 @@ const checkLetStatement = (
   identifier: string,
   value: Item
 ) => {
-  expect(ast.tokenLiteral(statement)).toBe("let");
   expect(statement).toHaveProperty("nodeType", ast.NodeType.LET);
   const letStatement = statement as ast.LetStatement;
 
   expect(letStatement.name.value).toBe(identifier);
-  expect(ast.tokenLiteral(letStatement.name)).toBe(identifier);
 
   checkItem(letStatement.value, value);
 };
@@ -356,7 +354,6 @@ const checkIntegerLiteral = (
   const literal = expr as ast.IntegerLiteral;
 
   expect(literal.value).toBe(integerValue);
-  expect(ast.tokenLiteral(literal)).toBe(`${integerValue}`);
 };
 
 const checkIdentifier = (expr: ast.Expression | undefined, name: string) => {
@@ -364,7 +361,6 @@ const checkIdentifier = (expr: ast.Expression | undefined, name: string) => {
   let ident = expr as ast.Identifier;
 
   expect(ident.value).toBe(name);
-  expect(ast.tokenLiteral(ident)).toBe(name);
 };
 
 const checkBooleanLiteral = (
@@ -375,7 +371,6 @@ const checkBooleanLiteral = (
   const literal = expr as ast.BooleanLiteral;
 
   expect(literal.value).toBe(boolValue);
-  expect(ast.tokenLiteral(literal)).toBe(`${boolValue}`);
 };
 
 const checkItem = (expr: ast.Expression, value: Item) => {

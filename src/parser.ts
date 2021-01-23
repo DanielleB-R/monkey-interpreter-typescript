@@ -115,7 +115,6 @@ export default class Parser {
   }
 
   parseProgram(): ast.Program {
-    const token = this.curToken;
     const statements: ast.Statement[] = [];
 
     while (!this.currentIs(TokenType.EOF)) {
@@ -125,7 +124,7 @@ export default class Parser {
       }
       this.nextToken();
     }
-    return { nodeType: ast.NodeType.PROGRAM, token, statements };
+    return { nodeType: ast.NodeType.PROGRAM, statements };
   }
 
   parseStatement(): ast.Statement | null {
@@ -139,8 +138,6 @@ export default class Parser {
   }
 
   parseLetStatement(): ast.LetStatement | null {
-    const token = this.curToken;
-
     if (!this.expectPeek(TokenType.IDENT)) {
       return null;
     }
@@ -162,11 +159,10 @@ export default class Parser {
       this.nextToken();
     }
 
-    return { nodeType: ast.NodeType.LET, token, name, value };
+    return { nodeType: ast.NodeType.LET, name, value };
   }
 
   parseReturnStatement(): ast.ReturnStatement | null {
-    const token = this.curToken;
     this.nextToken();
 
     const returnValue = this.parseExpression(Precedence.LOWEST);
@@ -178,12 +174,10 @@ export default class Parser {
       this.nextToken();
     }
 
-    return { nodeType: ast.NodeType.RETURN, token, returnValue };
+    return { nodeType: ast.NodeType.RETURN, returnValue };
   }
 
   parseExpressionStatement(): ast.ExpressionStatement | null {
-    const token = this.curToken;
-
     const expression = this.parseExpression(Precedence.LOWEST);
     if (!expression) {
       return null;
@@ -193,7 +187,7 @@ export default class Parser {
       this.nextToken();
     }
 
-    return { nodeType: ast.NodeType.EXPR_STMT, token, expression };
+    return { nodeType: ast.NodeType.EXPR_STMT, expression };
   }
 
   parseExpression(precedence: Precedence): ast.Expression | null {
@@ -227,12 +221,10 @@ export default class Parser {
 
   parseBoolean = (): ast.BooleanLiteral => ({
     nodeType: ast.NodeType.BOOL,
-    token: this.curToken,
     value: this.currentIs(TokenType.TRUE),
   });
 
   parsePrefixExpression = (): ast.PrefixExpression | null => {
-    const token = this.curToken;
     const operator = this.curToken.literal;
 
     this.nextToken();
@@ -240,7 +232,7 @@ export default class Parser {
     if (!right) {
       return null;
     }
-    return { nodeType: ast.NodeType.PREFIX, token, operator, right };
+    return { nodeType: ast.NodeType.PREFIX, operator, right };
   };
 
   parseGroupedExpression = (): ast.Expression | null => {
@@ -254,7 +246,6 @@ export default class Parser {
   };
 
   parseInfixExpression = (left: ast.Expression): ast.InfixExpression | null => {
-    const token = this.curToken;
     const operator = this.curToken.literal;
 
     const precedence = this.curPrecedence();
@@ -263,12 +254,10 @@ export default class Parser {
     if (!right) {
       return null;
     }
-    return { nodeType: ast.NodeType.INFIX, token, left, operator, right };
+    return { nodeType: ast.NodeType.INFIX, left, operator, right };
   };
 
   parseIfExpression = (): ast.IfExpression | null => {
-    const token = this.curToken;
-
     if (!this.expectPeek(TokenType.LPAREN)) {
       return null;
     }
@@ -303,7 +292,6 @@ export default class Parser {
     }
     return {
       nodeType: ast.NodeType.IF,
-      token,
       condition,
       consequence,
       alternative,
@@ -311,7 +299,6 @@ export default class Parser {
   };
 
   parseBlockStatement = (): ast.BlockStatement => {
-    const token = this.curToken;
     const statements: ast.Statement[] = [];
 
     this.nextToken();
@@ -326,12 +313,10 @@ export default class Parser {
       this.nextToken();
     }
 
-    return { nodeType: ast.NodeType.BLOCK, token, statements };
+    return { nodeType: ast.NodeType.BLOCK, statements };
   };
 
   parseFunctionLiteral = (): ast.FunctionLiteral | null => {
-    const token = this.curToken;
-
     if (!this.expectPeek(TokenType.LPAREN)) {
       return null;
     }
@@ -347,7 +332,7 @@ export default class Parser {
 
     const body = this.parseBlockStatement();
 
-    return { nodeType: ast.NodeType.FN, token, parameters, body };
+    return { nodeType: ast.NodeType.FN, parameters, body };
   };
 
   parseFunctionParameters = (): ast.Identifier[] | null => {
@@ -374,12 +359,11 @@ export default class Parser {
   };
 
   parseCallExpression = (left: ast.Expression): ast.CallExpression | null => {
-    const token = this.curToken;
     const args = this.parseExpressionList(TokenType.RPAREN);
     if (!args) {
       return null;
     }
-    return { nodeType: ast.NodeType.CALL, fn: left, token, args };
+    return { nodeType: ast.NodeType.CALL, fn: left, args };
   };
 
   parseExpressionList = (end: TokenType): ast.Expression[] | null => {
@@ -416,23 +400,19 @@ export default class Parser {
   parseStringLiteral = (): ast.StringLiteral => {
     return {
       nodeType: ast.NodeType.STR,
-      token: this.curToken,
       value: this.curToken.literal,
     };
   };
 
   parseArrayLiteral = (): ast.ArrayLiteral | null => {
-    const token = this.curToken;
-
     const elements = this.parseExpressionList(TokenType.RBRACKET);
     if (!elements) {
       return null;
     }
-    return { nodeType: ast.NodeType.ARRAY, token, elements };
+    return { nodeType: ast.NodeType.ARRAY, elements };
   };
 
   parseIndexExpression = (left: ast.Expression): ast.IndexExpression | null => {
-    const token = this.curToken;
     this.nextToken();
 
     const index = this.parseExpression(Precedence.LOWEST);
@@ -443,11 +423,10 @@ export default class Parser {
     if (!this.expectPeek(TokenType.RBRACKET)) {
       return null;
     }
-    return { nodeType: ast.NodeType.INDEX, token, left, index };
+    return { nodeType: ast.NodeType.INDEX, left, index };
   };
 
   parseHashLiteral = (): ast.HashLiteral | null => {
-    const token = this.curToken;
     const pairs: [ast.Expression, ast.Expression][] = [];
 
     while (!this.peekIs(TokenType.RBRACE) && !this.peekIs(TokenType.EOF)) {
@@ -474,6 +453,6 @@ export default class Parser {
       return null;
     }
 
-    return { nodeType: ast.NodeType.HASH, token, pairs };
+    return { nodeType: ast.NodeType.HASH, pairs };
   };
 }
