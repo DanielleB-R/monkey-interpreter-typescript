@@ -56,6 +56,18 @@ export type Statement =
   | ExpressionStatement
   | BlockStatement;
 
+export function isStatement(node: Node): node is Statement {
+  switch (node.nodeType) {
+    case NodeType.LET:
+    case NodeType.RETURN:
+    case NodeType.EXPR_STMT:
+    case NodeType.BLOCK:
+      return true;
+    default:
+      return false;
+  }
+}
+
 export interface Identifier extends NodeBase {
   nodeType: NodeType.IDENTIFIER;
   value: string;
@@ -151,6 +163,26 @@ export type Expression =
   | ArrayLiteral
   | HashLiteral
   | IndexExpression;
+
+export function isExpression(node: Node): node is Expression {
+  switch (node.nodeType) {
+    case NodeType.IDENTIFIER:
+    case NodeType.INT:
+    case NodeType.BOOL:
+    case NodeType.PREFIX:
+    case NodeType.INFIX:
+    case NodeType.IF:
+    case NodeType.FN:
+    case NodeType.CALL:
+    case NodeType.STR:
+    case NodeType.ARRAY:
+    case NodeType.HASH:
+    case NodeType.INDEX:
+      return true;
+    default:
+      return false;
+  }
+}
 
 export type Node = Program | Statement | Expression;
 
