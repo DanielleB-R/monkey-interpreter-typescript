@@ -2,6 +2,7 @@ import * as ast from "./ast-json";
 import * as o from "./object";
 import { NULL, TRUE, FALSE } from "./object";
 import BUILTINS from "./builtins";
+import { quote } from "./quote-unquote";
 
 const objectifyBoolean = (b: boolean): o.MonkeyBoolean => (b ? TRUE : FALSE);
 
@@ -277,6 +278,10 @@ const evalCallExpression = (
   call: ast.CallExpression,
   env: o.Environment
 ): o.MonkeyObject => {
+  // Bypass everything for quoting!
+  if (ast.repr(call.fn) === "quote") {
+    return quote(call.args[0], env);
+  }
   const fn = monkeyEval(call.fn, env);
   switch (fn.objectType) {
     case o.ObjectType.FUNCTION:

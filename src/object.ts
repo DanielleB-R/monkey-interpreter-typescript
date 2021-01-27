@@ -14,6 +14,7 @@ export enum ObjectType {
   BUILTIN = "BUILTIN",
   ARRAY = "ARRAY",
   HASH = "HASH",
+  QUOTE = "QUOTE",
 }
 
 export type HashKey = string | number | boolean;
@@ -105,6 +106,11 @@ export interface Builtin extends ObjectBase {
   fn: BuiltinFunction;
 }
 
+export interface Quote extends ObjectBase {
+  objectType: ObjectType.QUOTE;
+  node: ast.Node;
+}
+
 export type MonkeyObject =
   | MonkeyInteger
   | MonkeyBoolean
@@ -114,7 +120,8 @@ export type MonkeyObject =
   | MonkeyNull
   | ReturnValue
   | MonkeyFunction
-  | Builtin;
+  | Builtin
+  | Quote;
 
 export class EvalError {
   message: string;
@@ -177,6 +184,8 @@ export function inspect(obj: MonkeyObject): string {
       const pairs: string[] = [];
       obj.map.forEach((value, key) => pairs.push(`${key}: ${inspect(value)}`));
       return `{${pairs.join(", ")}}`;
+    case ObjectType.QUOTE:
+      return `QUOTE(${ast.repr(obj.node)})`;
   }
 }
 
