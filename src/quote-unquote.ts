@@ -38,6 +38,18 @@ const objectToAst = (obj: o.MonkeyObject): ast.Node => {
         nodeType: ast.NodeType.INT,
         value: obj.value,
       };
+    case o.ObjectType.BOOLEAN:
+      return {
+        nodeType: ast.NodeType.BOOL,
+        value: obj.value,
+      };
+    case o.ObjectType.QUOTE:
+      return obj.node;
+    case o.ObjectType.STRING:
+      return {
+        nodeType: ast.NodeType.STR,
+        value: obj.value,
+      };
     default:
       throw "Unimplemented!";
   }
